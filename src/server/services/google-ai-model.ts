@@ -15,7 +15,15 @@ const generationConfig = {
   responseMimeType: 'application/json'
 };
 
-export const AIChatSession = model.startChat({
-  generationConfig,
-  history: []
-});
+// Stateless generation: a fresh call per request with no shared chat session or
+// history. This prevents one user's prompt/PII from leaking into another user's
+// request, and avoids unbounded history growth and concurrency corruption that a
+// shared module-level `startChat` session causes on warm serverless instances.
+export async function generateJsonContent(prompt: string): Promise<string> {
+  const result = await model.generateContent({
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig
+  });
+
+  return result.response.text();
+}

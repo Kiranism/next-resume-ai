@@ -2,7 +2,7 @@ import {
   resumeFormSchema,
   TResumeEditFormValues
 } from '@/features/resume/utils/form-schema';
-import { AIChatSession } from './google-ai-model';
+import { generateJsonContent } from './google-ai-model';
 import { resumeEditFormSchema } from '@/features/resume/utils/form-schema';
 import { ZodObject } from 'zod';
 import { Profile } from '@/server/db/schema/profiles';
@@ -43,8 +43,6 @@ export async function generateResumeContent(
   profile: ProfileWithRelations
 ): Promise<TResumeEditFormValues> {
   const schemaStructure = getSchemaStructure(resumeEditFormSchema);
-
-  console.log('schema strucutre', schemaStructure);
 
   const prompt = `
     Generate a professional resume based on the following information (dont mention the company name this is a job description where we wanted to apply so make it ats friendly by using above or following information):
@@ -111,9 +109,7 @@ export async function generateResumeContent(
   `;
 
   try {
-    const result = await AIChatSession.sendMessage(prompt);
-    const responseText = await result.response.text();
-    console.log('AI Response:', responseText);
+    const responseText = await generateJsonContent(prompt);
 
     const content = JSON.parse(responseText) as TResumeEditFormValues;
 
