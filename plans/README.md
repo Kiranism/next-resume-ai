@@ -15,10 +15,16 @@ vision; plans are written one slice at a time on request.
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 001  | Instant live HTML resume preview | P1 | L | — | **SUPERSEDED by 002** — HTML-preview approach set aside; maintainer chose to keep the `@react-pdf` renderer and fix its flash instead. Do not execute. |
-| 002  | Live PDF preview without the keystroke flash (keep native pagination + page nav) | P1 | M | — | IN PROGRESS (executor dispatched) |
-| 003  | Harden the auth middleware (remove bearer bypass, fix swallowed 401) | P1 | S | — | IN PROGRESS (executor dispatched) |
-| 004  | Enforce resource ownership (fix IDOR) on resume & profile access | P1 | M | 003 | IN PROGRESS (executor dispatched) |
-| 005  | Stateless per-request AI generation (fix shared Gemini session) | P1 | S | — | IN PROGRESS (executor dispatched) |
+| 002  | Live PDF preview without the keystroke flash (keep native pagination + page nav) | P1 | M | — | DONE (`6b2307b`) — reviewed & integrated; tsc 0 |
+| 003  | Harden the auth middleware (remove bearer bypass, fix swallowed 401) | P1 | S | — | DONE (`48031c5`) — reviewed & integrated; tsc 0 |
+| 004  | Enforce resource ownership (fix IDOR) on resume & profile access | P1 | M | 003 | DONE (`e2a1cbf`) — reviewed & integrated; tsc 0 |
+| 005  | Stateless per-request AI generation (fix shared Gemini session) | P1 | S | — | DONE (`1f77768`) — reviewed & integrated; tsc 0 |
+| 006  | DX: fix ESLint v8/v9 conflict + add `typecheck` script | P1 | S | — | IN PROGRESS (executor dispatched) |
+
+All four DONE plans were implemented by an executor in an isolated worktree,
+reviewed by the advisor (done-criteria re-run, scope checked, diff read), and
+cherry-picked onto `improve/product-upgrades`. A combined `tsc --noEmit` across
+all four passes. `main` is untouched — merging is the maintainer's call.
 
 Execution model: each plan is implemented by a `general-purpose` executor in an
 isolated git worktree; the advisor reviews each diff (re-runs done criteria,
