@@ -53,9 +53,6 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
     languages: resume?.languages as TResumeEditFormValues['languages']
   };
 
-  console.log('resume data', resume);
-  console.log('intialdata', initalData);
-
   const form = useForm<TResumeEditFormValues>({
     resolver: zodResolver(resumeEditFormSchema),
     defaultValues: initalData,
@@ -96,15 +93,6 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
     }
   };
 
-  // Extract PDF preview component
-  const PdfPreview = () => (
-    <div className='relative flex h-full justify-center bg-accent pt-2'>
-      <div className='scale-90'>
-        <PdfRenderer formData={formData} templateId={selectedTemplate} />
-      </div>
-    </div>
-  );
-
   return (
     <div className='h-full p-4'>
       {/* Mode Toggle */}
@@ -133,7 +121,14 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
           <ResizablePanel defaultSize={55} minSize={45}>
             <div className='h-full w-full'>
               <ScrollArea className='h-[calc(100vh)]'>
-                <PdfPreview />
+                <div className='relative flex h-full justify-center bg-accent pt-2'>
+                  <div className='origin-top scale-90'>
+                    <PdfRenderer
+                      formData={formData}
+                      templateId={selectedTemplate}
+                    />
+                  </div>
+                </div>
               </ScrollArea>
             </div>
           </ResizablePanel>
