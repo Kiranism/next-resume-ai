@@ -19,7 +19,7 @@ vision; plans are written one slice at a time on request.
 | 003  | Harden the auth middleware (remove bearer bypass, fix swallowed 401) | P1 | S | — | DONE (`48031c5`) — reviewed & integrated; tsc 0 |
 | 004  | Enforce resource ownership (fix IDOR) on resume & profile access | P1 | M | 003 | DONE (`e2a1cbf`) — reviewed & integrated; tsc 0 |
 | 005  | Stateless per-request AI generation (fix shared Gemini session) | P1 | S | — | DONE (`1f77768`) — reviewed & integrated; tsc 0 |
-| 006  | DX: fix ESLint v8/v9 conflict + add `typecheck` script | P1 | S | — | IN PROGRESS (executor dispatched) |
+| 006  | DX: fix ESLint v8/v9 conflict + add `typecheck` script | P1 | S | — | DONE (`efba691`) — reviewed & integrated; `pnpm lint` now exits 0 |
 
 All four DONE plans were implemented by an executor in an isolated worktree,
 reviewed by the advisor (done-criteria re-run, scope checked, diff read), and
