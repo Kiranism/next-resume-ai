@@ -24,14 +24,10 @@ export const resumeRouter = j.router({
       const { user } = ctx;
       const { profileId, ...resumeData } = input;
 
-      console.log('user from ctx', user);
-
       // Get the account record first
       const account = await db.query.accounts.findFirst({
         where: eq(accounts.externalId, user.externalId)
       });
-
-      console.log('acccount', account);
 
       if (!account) {
         throw new Error('Account not found');
@@ -56,7 +52,7 @@ export const resumeRouter = j.router({
         }
       });
 
-      if (!profile) {
+      if (!profile || profile.userId !== account.id) {
         return c.json({ error: 'Profile not found' }, 404);
       }
 
@@ -100,20 +96,23 @@ export const resumeRouter = j.router({
     return c.json(userProfiles);
   }),
 
-  // Get a resume by ID
+  // Get a resume by ID (owner only)
   getResume: privateProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ c, ctx, input }) => {
-      console.log('input', input);
       const { user } = ctx;
 
       const resume = await db.query.resumes.findFirst({
-        where: eq(resumes.id, input.id)
+        where: and(eq(resumes.id, input.id), eq(resumes.userId, user.id))
       });
+
+      if (!resume) {
+        return c.json({ error: 'Not found' }, 404);
+      }
 
       return c.json(resume);
     }),
-  // Update a resume
+  // Update a resume (owner only)
   updateResume: privateProcedure
     .input(
       z.object({
@@ -122,6 +121,7 @@ export const resumeRouter = j.router({
       })
     )
     .mutation(async ({ c, ctx, input }) => {
+      const { user } = ctx;
       const { id, ...updateData } = input;
 
       const [updated] = await db
@@ -130,18 +130,27 @@ export const resumeRouter = j.router({
           ...updateData,
           updatedAt: new Date()
         })
-        .where(eq(resumes.id, id))
+        .where(and(eq(resumes.id, id), eq(resumes.userId, user.id)))
         .returning();
+
+      if (!updated) {
+        return c.json({ error: 'Not found' }, 404);
+      }
 
       return c.json(updated);
     }),
 
-  // Get all resumes for a profile
+  // Get all resumes for a profile (owner only)
   getProfileResumes: privateProcedure
     .input(z.object({ profileId: z.string() }))
     .query(async ({ c, ctx, input }) => {
+      const { user } = ctx;
+
       const profileResumes = await db.query.resumes.findMany({
-        where: eq(resumes.profileId, input.profileId)
+        where: and(
+          eq(resumes.profileId, input.profileId),
+          eq(resumes.userId, user.id)
+        )
       });
 
       return c.json(profileResumes);
@@ -177,9 +186,21 @@ export const resumeRouter = j.router({
       })
     )
     .mutation(async ({ c, ctx, input }) => {
+      const { user } = ctx;
       const { resumeId, image } = input;
 
       try {
+        const existing = await db.query.resumes.findFirst({
+          where: and(
+            eq(resumes.id, String(resumeId)),
+            eq(resumes.userId, user.id)
+          )
+        });
+
+        if (!existing) {
+          return c.json({ error: 'Not found' }, 404);
+        }
+
         const imageUrl = await uploadImageToStorage(image);
         const [updated] = await db
           .update(resumes)
@@ -187,7 +208,9 @@ export const resumeRouter = j.router({
             previewImageUrl: imageUrl,
             updatedAt: new Date()
           })
-          .where(eq(resumes.id, String(resumeId)))
+          .where(
+            and(eq(resumes.id, String(resumeId)), eq(resumes.userId, user.id))
+          )
           .returning();
 
         return c.json(updated);

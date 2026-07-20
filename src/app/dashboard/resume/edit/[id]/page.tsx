@@ -1,11 +1,13 @@
 import { ResumeEditContent } from '@/features/resume/components/resume-edit-content';
 import { db } from '@/server/db';
 import { resumes } from '@/server/db/schema/resumes';
-import { eq } from 'drizzle-orm';
+import { accounts } from '@/server/db/schema/accounts';
+import { and, eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import EditResumeLoading from './loading';
 import { Metadata } from 'next';
+import { currentUser } from '@clerk/nextjs/server';
 
 export default async function EditResumePage({
   params
@@ -19,8 +21,20 @@ export default async function EditResumePage({
       notFound();
     }
 
+    const auth = await currentUser();
+    if (!auth) {
+      notFound();
+    }
+
+    const account = await db.query.accounts.findFirst({
+      where: eq(accounts.externalId, auth.id)
+    });
+    if (!account) {
+      notFound();
+    }
+
     const resume = await db.query.resumes.findFirst({
-      where: eq(resumes.id, resumeId)
+      where: and(eq(resumes.id, resumeId), eq(resumes.userId, account.id))
     });
 
     if (!resume) {

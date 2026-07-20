@@ -3,7 +3,7 @@ import { j, privateProcedure } from '../jstack';
 import { profileSchema } from '@/features/profile/utils/form-schema';
 import { db } from '../db';
 import { profiles } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import {
   Education,
@@ -101,6 +101,14 @@ export const profileRouter = j.router({
       const { id, ...inputData } = input;
       const { user } = ctx;
 
+      // Ownership check: you may only update your own profile.
+      const owned = await db.query.profiles.findFirst({
+        where: eq(profiles.id, id)
+      });
+      if (!owned || owned.userId !== user.id) {
+        return c.json({ error: 'Not found' }, 404);
+      }
+
       return await db.transaction(async (tx) => {
         // Update the base profile
         const [updatedProfile] = await tx
@@ -114,7 +122,7 @@ export const profileRouter = j.router({
             city: inputData.city,
             updatedAt: new Date()
           })
-          .where(eq(profiles.id, id))
+          .where(and(eq(profiles.id, id), eq(profiles.userId, user.id)))
           .returning();
 
         // Delete existing jobs and education to replace with new ones
