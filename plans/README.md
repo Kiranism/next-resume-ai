@@ -15,7 +15,16 @@ vision; plans are written one slice at a time on request.
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 001  | Instant live HTML resume preview | P1 | L | — | **SUPERSEDED by 002** — HTML-preview approach set aside; maintainer chose to keep the `@react-pdf` renderer and fix its flash instead. Do not execute. |
-| 002  | Live PDF preview without the keystroke flash (keep native pagination + page nav) | P1 | M | — | TODO |
+| 002  | Live PDF preview without the keystroke flash (keep native pagination + page nav) | P1 | M | — | IN PROGRESS (executor dispatched) |
+| 003  | Harden the auth middleware (remove bearer bypass, fix swallowed 401) | P1 | S | — | IN PROGRESS (executor dispatched) |
+| 004  | Enforce resource ownership (fix IDOR) on resume & profile access | P1 | M | 003 | IN PROGRESS (executor dispatched) |
+| 005  | Stateless per-request AI generation (fix shared Gemini session) | P1 | S | — | IN PROGRESS (executor dispatched) |
+
+Execution model: each plan is implemented by a `general-purpose` executor in an
+isolated git worktree; the advisor reviews each diff (re-runs done criteria,
+checks scope, reads the diff) and integrates approved work onto the
+`improve/product-upgrades` branch. `main` is never touched — merging is the
+maintainer's call.
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 SUPERSEDED / REJECTED (one-line rationale).
@@ -52,7 +61,7 @@ Ask the advisor to write any of these as the next numbered plan.
 
 ### Production hardening (from the audit — required for "production level")
 
-- **[S1] IDOR / broken object-level auth (P1, HIGH):** `getResume`,
+- **[S1 → now plan 004] IDOR / broken object-level auth (P1, HIGH):** `getResume`,
   `updateResume`, `getProfileResumes`, `uploadPreviewImage`
   (`src/server/routers/resume-router.ts`), `updateProfile`
   (`profile-router.ts`), the `profileId` in `createResume`, and the RSC
@@ -60,14 +69,14 @@ Ask the advisor to write any of these as the next numbered plan.
   ownership check** — any signed-in user can read/overwrite anyone's resumes and
   profiles. `src/app/dashboard/resume/page.tsx:43-64` already shows the correct
   ownership pattern to copy. Effort: M.
-- **[S2] Auth bypass + swallowed 401 (P1, HIGH):** `src/server/jstack.ts` accepts
+- **[S2 → now plan 003] Auth bypass + swallowed 401 (P1, HIGH):** `src/server/jstack.ts` accepts
   `Authorization: Bearer <account_id>` as valid auth (account IDs are non-secret
   nanoids returned to clients), and its `try/catch` swallows the 401 instead of
   re-throwing. Effort: S.
-- **[C1] Shared Gemini session (P1, HIGH):** `src/server/services/google-ai-model.ts:18`
+- **[C1 → now plan 005] Shared Gemini session (P1, HIGH):** `src/server/services/google-ai-model.ts:18`
   exports one module-level `startChat` shared by all users; history accumulates
   across users (PII bleed), grows unbounded, and races under concurrency.
-  Effort: S–M. (Covered by "Generation quality" above.)
+  Effort: S–M.
 - **[DX] Verification baseline (P1):** no `typecheck` script, no tests, no test
   runner. Add `tsc --noEmit` + Vitest + a router-test harness so the security
   fixes get a regression net. Effort: S+M.
