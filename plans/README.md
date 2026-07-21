@@ -36,7 +36,7 @@ vision; plans are written one slice at a time on request.
 **All backlog items (010–014) implemented. 13 plans executed + reviewed +
 integrated (001 superseded). PDF/DOCX import upload deferred (see plan 014 notes).**
 
-| 015 | Eliminate PDF preview flash — ping-pong double-buffer + fixed sizing | P1 | M | 002 | IN PROGRESS (executor dispatched) |
+| 015 | Eliminate PDF preview flash — ping-pong double-buffer + fixed sizing | P1 | M | 002 | DONE (`58ae94e`) — integrated; tsc/lint 0. **Needs runtime confirmation by maintainer.** |
 
 Plan 015 supersedes plan 002's double-buffer: runtime testing showed 002 still
 flashed white (missing fixed Page sizing + a persistent buffer). 015 rewrites the
