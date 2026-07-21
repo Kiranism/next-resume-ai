@@ -17,6 +17,11 @@ export const metadata: Metadata = {
   }
 };
 
-export default function CreateResumePage() {
-  return <CreateResumeContent />;
+export default async function CreateResumePage({
+  searchParams
+}: {
+  searchParams: Promise<{ profileId?: string }>;
+}) {
+  const { profileId } = await searchParams;
+  return <CreateResumeContent initialProfileId={profileId} />;
 }

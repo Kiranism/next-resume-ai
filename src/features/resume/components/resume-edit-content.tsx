@@ -1,11 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup
 } from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
 import { EditResumeForm } from '@/features/resume/components/edit-resume-form';
 import { ModeToggle } from '@/features/resume/components/mode-toggle';
 import PdfRenderer from '@/features/resume/components/pdf-renderer';
@@ -123,6 +125,13 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
           <ResizablePanel defaultSize={55} minSize={45}>
             <div className='h-full w-full'>
               <div className='flex justify-end gap-2 p-2'>
+                <Button asChild variant='outline' size='sm'>
+                  <Link
+                    href={`/dashboard/resume/create?profileId=${resume.profileId}`}
+                  >
+                    Re-tailor
+                  </Link>
+                </Button>
                 <ResumeActions resumeId={resume.id} />
                 <AtsReportDialog resumeId={resume.id} />
               </div>
