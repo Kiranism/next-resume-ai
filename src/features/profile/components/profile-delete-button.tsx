@@ -30,16 +30,18 @@ export function ProfileDeleteButton({ profileId }: { profileId: string }) {
 
   return (
     <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button
-          variant='ghost'
-          size='icon'
-          className='h-8 w-8 text-muted-foreground hover:text-destructive'
-          disabled={isPending}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Trash2 className='h-4 w-4' />
-        </Button>
+      <AlertDialogTrigger
+        render={
+          <Button
+            variant='ghost'
+            size='icon'
+            className='text-muted-foreground hover:text-destructive h-8 w-8'
+            disabled={isPending}
+            onClick={(e) => e.stopPropagation()}
+          />
+        }
+      >
+        <Trash2 className='h-4 w-4' />
       </AlertDialogTrigger>
       <AlertDialogContent onClick={(e) => e.stopPropagation()}>
         <AlertDialogHeader>

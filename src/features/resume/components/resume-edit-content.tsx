@@ -88,7 +88,7 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
     }
     if (mode === 'preview') {
       return (
-        <div className='relative flex h-full justify-center bg-accent pt-4'>
+        <div className='bg-accent relative flex h-full justify-center pt-4'>
           <div className='origin-top scale-75'>
             <PdfRenderer formData={formData} templateId={selectedTemplate} />
           </div>
@@ -125,18 +125,22 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
           <ResizablePanel defaultSize={55} minSize={45}>
             <div className='h-full w-full'>
               <div className='flex justify-end gap-2 p-2'>
-                <Button asChild variant='outline' size='sm'>
-                  <Link
-                    href={`/dashboard/resume/create?profileId=${resume.profileId}`}
-                  >
-                    Re-tailor
-                  </Link>
+                <Button
+                  render={
+                    <Link
+                      href={`/dashboard/resume/create?profileId=${resume.profileId}`}
+                    />
+                  }
+                  variant='outline'
+                  size='sm'
+                >
+                  Re-tailor
                 </Button>
                 <ResumeActions resumeId={resume.id} />
                 <AtsReportDialog resumeId={resume.id} />
               </div>
               <ScrollArea className='h-[calc(100vh-56px)]'>
-                <div className='relative flex h-full justify-center bg-accent pt-2'>
+                <div className='bg-accent relative flex h-full justify-center pt-2'>
                   <div className='origin-top scale-90'>
                     <PdfRenderer
                       formData={formData}

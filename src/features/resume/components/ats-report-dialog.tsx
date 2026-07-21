@@ -20,10 +20,8 @@ export function AtsReportDialog({ resumeId }: { resumeId: string }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant='outline' size='sm'>
-          ATS Score
-        </Button>
+      <DialogTrigger render={<Button variant='outline' size='sm' />}>
+        ATS Score
       </DialogTrigger>
       <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-lg'>
         <DialogHeader>
@@ -31,14 +29,14 @@ export function AtsReportDialog({ resumeId }: { resumeId: string }) {
         </DialogHeader>
 
         {isLoading && (
-          <div className='flex items-center gap-2 py-8 text-sm text-muted-foreground'>
+          <div className='text-muted-foreground flex items-center gap-2 py-8 text-sm'>
             <Loader2 className='h-4 w-4 animate-spin' /> Analyzing against the
             job description…
           </div>
         )}
 
         {isError && (
-          <p className='py-8 text-sm text-destructive'>
+          <p className='text-destructive py-8 text-sm'>
             Could not analyze this resume. Please try again.
           </p>
         )}
@@ -91,7 +89,7 @@ export function AtsReportDialog({ resumeId }: { resumeId: string }) {
               </div>
             )}
 
-            <p className='text-xs text-muted-foreground'>
+            <p className='text-muted-foreground text-xs'>
               This is an AI estimate of keyword alignment, not a guarantee of
               how any specific ATS will parse your resume.
             </p>

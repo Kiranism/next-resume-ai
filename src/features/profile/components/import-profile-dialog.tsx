@@ -67,14 +67,14 @@ export function ImportProfileDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant='outline'>Import resume</Button>
+      <DialogTrigger render={<Button variant='outline' />}>
+        Import resume
       </DialogTrigger>
       <DialogContent className='sm:max-w-lg'>
         <DialogHeader>
           <DialogTitle>Import a profile</DialogTitle>
         </DialogHeader>
-        <p className='text-sm text-muted-foreground'>
+        <p className='text-muted-foreground text-sm'>
           Upload your resume PDF (or paste its text). We&apos;ll parse it into a
           profile you can review and edit.
         </p>

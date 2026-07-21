@@ -65,10 +65,12 @@ export function ResumeActions({ resumeId }: { resumeId: string }) {
       </Button>
 
       <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button variant='destructive' size='sm' disabled={isDeleting}>
-            <Trash2 className='mr-1 h-4 w-4' /> Delete
-          </Button>
+        <AlertDialogTrigger
+          render={
+            <Button variant='destructive' size='sm' disabled={isDeleting} />
+          }
+        >
+          <Trash2 className='mr-1 h-4 w-4' /> Delete
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>

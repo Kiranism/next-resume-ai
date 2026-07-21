@@ -176,7 +176,7 @@ const PdfRenderer = ({ formData, templateId }: TPdfRendererProps) => {
         </div>
 
         {showLoader && (
-          <div className='absolute inset-0 flex items-center justify-center text-sm text-muted-foreground'>
+          <div className='text-muted-foreground absolute inset-0 flex items-center justify-center text-sm'>
             Rendering preview…
           </div>
         )}
@@ -217,14 +217,16 @@ const PdfRenderer = ({ formData, templateId }: TPdfRendererProps) => {
             </div>
 
             {urls[front] && (
-              <Button asChild>
-                <a
-                  href={urls[front] ?? undefined}
-                  download={`next-resume-${Date.now()}.pdf`}
-                  className='text-primary'
-                >
-                  Download PDF
-                </a>
+              <Button
+                render={
+                  <a
+                    href={urls[front] ?? undefined}
+                    download={`next-resume-${Date.now()}.pdf`}
+                    className='text-primary'
+                  />
+                }
+              >
+                Download PDF
               </Button>
             )}
           </div>

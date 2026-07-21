@@ -14,8 +14,8 @@ export function ProfileFilter() {
   const { data: profiles } = useProfiles();
   const { profileId, setProfileId } = useResumeFilters();
 
-  const handleProfileChange = (value: string) => {
-    if (value === 'all') {
+  const handleProfileChange = (value: string | null) => {
+    if (!value || value === 'all') {
       setProfileId(null, {
         shallow: false
       });
