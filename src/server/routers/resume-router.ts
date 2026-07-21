@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { j, privateProcedure } from '../jstack';
 import { db } from '../db';
 import { resumes, profiles, accounts } from '../db/schema';
-import { eq, desc, inArray, and } from 'drizzle-orm';
+import { eq, desc, inArray, and, count } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import {
   resumeFormSchema,
@@ -33,15 +33,19 @@ export const resumeRouter = j.router({
         throw new Error('Account not found');
       }
 
-      // Create new resume record with correct userId
-      const newResume = {
-        id: nanoid(),
-        userId: account.id, // Use account.id instead of user.id
-        profileId,
-        jdJobTitle: resumeData.jd_job_title,
-        employer: resumeData.employer,
-        jdPostDetails: resumeData.jd_post_details
-      };
+      // Enforce per-account generation quota (accounts.quotaLimit; the user's
+      // resume count is the usage proxy). Prevents unbounded paid AI calls.
+      const [{ value: usedCount }] = await db
+        .select({ value: count() })
+        .from(resumes)
+        .where(eq(resumes.userId, account.id));
+
+      if (usedCount >= account.quotaLimit) {
+        return c.json(
+          { error: 'Generation quota reached. Delete a resume to make room.' },
+          429
+        );
+      }
 
       // Get profile data
       const profile = await db.query.profiles.findFirst({
@@ -56,10 +60,8 @@ export const resumeRouter = j.router({
         return c.json({ error: 'Profile not found' }, 404);
       }
 
-      // Insert initial resume into database
-      const [created] = await db.insert(resumes).values(newResume).returning();
-
-      // Generate AI content with combined profile and resume data
+      // Generate AI content BEFORE inserting, so a generation failure never
+      // leaves an orphan resume row in the database.
       const aiGeneratedContent = await generateResumeContent(
         {
           ...resumeData,
@@ -68,24 +70,27 @@ export const resumeRouter = j.router({
         profile
       );
 
-      // Update resume with AI generated content
-      const [updated] = await db
-        .update(resumes)
-        .set({
-          personalDetails: aiGeneratedContent.personal_details,
-          jobs: profile.jobs,
-          education: profile.educations,
-          skills: aiGeneratedContent.skills,
-          tools: aiGeneratedContent.tools,
-          languages: aiGeneratedContent.languages,
-          updatedAt: new Date()
-        })
-        .where(eq(resumes.id, created.id))
-        .returning();
+      // Insert the fully-populated resume in a single write.
+      const newResume = {
+        id: nanoid(),
+        userId: account.id,
+        profileId,
+        jdJobTitle: resumeData.jd_job_title,
+        employer: resumeData.employer,
+        jdPostDetails: resumeData.jd_post_details,
+        personalDetails: aiGeneratedContent.personal_details,
+        jobs: profile.jobs,
+        education: profile.educations,
+        skills: aiGeneratedContent.skills,
+        tools: aiGeneratedContent.tools,
+        languages: aiGeneratedContent.languages,
+        updatedAt: new Date()
+      };
+      const [created] = await db.insert(resumes).values(newResume).returning();
 
-      const sendResumeData = { ...updated, profile: profile };
+      const sendResumeData = { ...created, profile: profile };
 
-      return c.json({ id: updated.id, data: sendResumeData });
+      return c.json({ id: created.id, data: sendResumeData });
     }),
 
   getProfiles: privateProcedure.query(async ({ c, ctx }) => {
