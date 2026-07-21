@@ -1,5 +1,4 @@
 import { accounts } from './accounts';
-import { posts } from './posts';
 import { users } from './users';
 import {
   profiles,
@@ -14,7 +13,6 @@ import { resumes } from './resumes';
 export {
   // Tables
   accounts,
-  posts,
   users,
   profiles,
   jobs,
