@@ -62,7 +62,7 @@ export function SectionShell({
   const { isHidden } = useSectionVisibility(sectionKey);
 
   return (
-    <div className='space-y-6'>
+    <div className='flex flex-col gap-6'>
       <div className='flex items-center justify-between gap-2'>
         <div className='flex min-w-0 items-center gap-1.5'>
           <h2

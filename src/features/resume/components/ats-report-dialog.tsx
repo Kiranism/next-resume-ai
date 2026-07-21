@@ -42,7 +42,7 @@ export function AtsReportDialog({ resumeId }: { resumeId: string }) {
         )}
 
         {report && (
-          <div className='space-y-4'>
+          <div className='flex flex-col gap-4'>
             <div className='flex items-baseline gap-2'>
               <span className='text-4xl font-bold'>{report.score}</span>
               <span className='text-muted-foreground'>

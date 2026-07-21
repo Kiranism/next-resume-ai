@@ -49,9 +49,12 @@ export const Education = ({ control }: EducationProps) => {
         </Button>
       }
     >
-      <div className='space-y-6'>
+      <div className='flex flex-col gap-6'>
         {fields.map((field, index) => (
-          <div key={field.id} className='space-y-4 rounded-lg border p-4'>
+          <div
+            key={field.id}
+            className='flex flex-col gap-4 rounded-lg border p-4'
+          >
             <div className='flex justify-end'>
               <Button
                 type='button'

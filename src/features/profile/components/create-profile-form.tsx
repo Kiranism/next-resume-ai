@@ -256,7 +256,7 @@ export default function CreateProfileForm({ profile }: CreateProfileFormProps) {
     switch (step) {
       case 1:
         return (
-          <div className='space-y-4'>
+          <div className='flex flex-col gap-4'>
             <FormField
               control={form.control}
               name='email'
@@ -397,7 +397,7 @@ export default function CreateProfileForm({ profile }: CreateProfileFormProps) {
         );
       case 2:
         return (
-          <div className='space-y-4'>
+          <div className='flex flex-col gap-4'>
             <div className='flex items-center justify-between'>
               <h3 className='text-lg font-semibold'>Work Experience</h3>
               <Button
@@ -420,20 +420,20 @@ export default function CreateProfileForm({ profile }: CreateProfileFormProps) {
               </Button>
             </div>
             {jobFields.length === 0 ? (
-              <div className='py-4 text-center text-muted-foreground'>
+              <div className='text-muted-foreground py-4 text-center'>
                 No work experience added yet
               </div>
             ) : (
               jobFields.map((field, index) => (
                 <div
                   key={field.id}
-                  className='relative space-y-3 rounded-lg border bg-background p-4'
+                  className='bg-background relative flex flex-col gap-3 rounded-lg border p-4'
                 >
                   <Button
                     type='button'
                     variant='destructive'
                     size='icon'
-                    className='absolute right-2 top-2 h-8 w-8'
+                    className='absolute top-2 right-2 h-8 w-8'
                     onClick={() => removeJob(index)}
                   >
                     <Trash2 className='h-4 w-4' />
@@ -535,7 +535,7 @@ export default function CreateProfileForm({ profile }: CreateProfileFormProps) {
         );
       case 3:
         return (
-          <div className='space-y-4'>
+          <div className='flex flex-col gap-4'>
             <div className='flex items-center justify-between'>
               <h3 className='text-lg font-semibold'>Education</h3>
               <Button
@@ -559,20 +559,20 @@ export default function CreateProfileForm({ profile }: CreateProfileFormProps) {
               </Button>
             </div>
             {educationFields.length === 0 ? (
-              <div className='py-4 text-center text-muted-foreground'>
+              <div className='text-muted-foreground py-4 text-center'>
                 No education added yet
               </div>
             ) : (
               educationFields.map((field, index) => (
                 <div
                   key={field.id}
-                  className='relative space-y-3 rounded-lg border bg-background p-4'
+                  className='bg-background relative flex flex-col gap-3 rounded-lg border p-4'
                 >
                   <Button
                     type='button'
                     variant='destructive'
                     size='icon'
-                    className='absolute right-2 top-2 h-8 w-8'
+                    className='absolute top-2 right-2 h-8 w-8'
                     onClick={() => removeEducation(index)}
                   >
                     <Trash2 className='h-4 w-4' />
@@ -687,9 +687,9 @@ export default function CreateProfileForm({ profile }: CreateProfileFormProps) {
         );
       case 4:
         return (
-          <div className='space-y-4'>
+          <div className='flex flex-col gap-4'>
             <h3 className='text-lg font-semibold'>Review Your Information</h3>
-            <div className='rounded-lg bg-muted/50 p-4'>
+            <div className='bg-muted/50 rounded-lg p-4'>
               <h4 className='mb-2 font-semibold'>Basic Information</h4>
               <p>
                 Name: {form.getValues('firstname')} {form.getValues('lastname')}
@@ -700,7 +700,7 @@ export default function CreateProfileForm({ profile }: CreateProfileFormProps) {
                 Location: {form.getValues('city')}, {form.getValues('country')}
               </p>
 
-              <h4 className='mb-2 mt-4 font-semibold'>Work Experience</h4>
+              <h4 className='mt-4 mb-2 font-semibold'>Work Experience</h4>
               {jobFields.map((job, index) => (
                 <div key={job.id} className='mb-2'>
                   <p>
@@ -710,7 +710,7 @@ export default function CreateProfileForm({ profile }: CreateProfileFormProps) {
                 </div>
               ))}
 
-              <h4 className='mb-2 mt-4 font-semibold'>Education</h4>
+              <h4 className='mt-4 mb-2 font-semibold'>Education</h4>
               {educationFields.map((edu, index) => (
                 <div key={edu.id} className='mb-2'>
                   <p>
@@ -729,9 +729,12 @@ export default function CreateProfileForm({ profile }: CreateProfileFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className='flex flex-col gap-6'
+      >
         {/* Stepper Indicators */}
-        <div className='mb-4 flex justify-center space-x-2'>
+        <div className='mb-4 flex justify-center gap-2'>
           {steps.slice(0, -1).map((_, index) => (
             <div
               key={index}

@@ -70,7 +70,7 @@ export function ImportProfileDialog() {
       <DialogTrigger render={<Button variant='outline' />}>
         Import resume
       </DialogTrigger>
-      <DialogContent className='sm:max-w-lg'>
+      <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-lg'>
         <DialogHeader>
           <DialogTitle>Import a profile</DialogTitle>
         </DialogHeader>
@@ -104,7 +104,7 @@ export function ImportProfileDialog() {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder='…or paste your resume text here'
-          className='min-h-[200px]'
+          className='max-h-[45vh] min-h-[140px] overflow-y-auto'
         />
         <DialogFooter>
           <Button onClick={handleImport} disabled={isPending || !text.trim()}>

@@ -76,7 +76,7 @@ export default function AppSidebar() {
   const { toggleSidebar, state } = useSidebar();
 
   return (
-    <Sidebar collapsible='icon'>
+    <Sidebar collapsible='offcanvas'>
       <SidebarHeader>
         <div className='text-sidebar-accent-foreground flex gap-2 py-2'>
           <div className='bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg'>

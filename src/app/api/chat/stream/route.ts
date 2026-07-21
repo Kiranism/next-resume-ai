@@ -15,6 +15,9 @@ import type { ChatMessage, ChatRole } from '@/features/resume/utils/chat-types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+// Streamed AI replies can run past Vercel's 10s default; 60s is the Hobby cap
+// without Fluid Compute (raise to 300 once Fluid Compute is enabled).
+export const maxDuration = 60;
 
 interface ChatStreamBody {
   resumeId: string;

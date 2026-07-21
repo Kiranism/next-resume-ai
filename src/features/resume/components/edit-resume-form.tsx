@@ -20,7 +20,7 @@ interface EditResumeFormProps {
 export const EditResumeForm = ({ form }: EditResumeFormProps) => {
   return (
     <Form {...form}>
-      <div className='space-y-8'>
+      <div className='flex flex-col gap-8'>
         <PersonalDetails control={form.control} />
         <WorkExperience control={form.control} />
         <Education control={form.control} />
