@@ -1,22 +1,23 @@
 // AI text generation via OpenRouter (OpenAI-compatible chat completions).
-// One request per call (stateless). The model is configurable with
-// OPENROUTER_MODEL; default is a cheap, reliable JSON-capable model.
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
-
+// One request per call (stateless). Model configurable with OPENROUTER_MODEL.
 export async function generateJsonContent(prompt: string): Promise<string> {
-  if (!OPENROUTER_API_KEY) {
-    throw new Error('OPENROUTER_API_KEY is not set');
+  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
+  const model = process.env.OPENROUTER_MODEL?.trim() || 'openai/gpt-4o-mini';
+
+  if (!apiKey) {
+    throw new Error(
+      'OPENROUTER_API_KEY is not set — add your OpenRouter key to .env (OPENROUTER_API_KEY=sk-or-...) and restart the dev server.'
+    );
   }
 
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: OPENROUTER_MODEL,
+      model,
       messages: [
         {
           role: 'system',
