@@ -30,8 +30,11 @@ vision; plans are written one slice at a time on request.
 | 010 | Remove dead starter scaffolding + unused deps | P2 | M | — | DONE (`5f76235`) — reviewed & integrated; -4122 LOC, tsc/lint 0 |
 | 011 | Profile deletion (cascade) | P2 | S | 004 | DONE (`e3a3210`) — reviewed & integrated; tsc/lint 0 |
 | 012 | ATS-safe single-column template | P2 | M | — | DONE (`11a587d`) — reviewed & integrated; tsc/lint 0 |
-| 013 | Re-tailor a resume for a new JD | P2 | S | 007 | IN PROGRESS (re-dispatched; plan fixed for rules-of-hooks) |
-| 014 | Import → profile (paste text → AI parse) [D2] | P1 | L | 005, 011 | TODO (after 011) |
+| 013 | Re-tailor a resume for a new JD | P2 | S | 007 | DONE (`3ca830b`) — reviewed & integrated; tsc/lint 0 |
+| 014 | Import → profile (paste text → AI parse) [D2] | P1 | L | 005, 011 | DONE (`5419ce5`) — reviewed & integrated; tsc/lint 0 |
+
+**All backlog items (010–014) implemented. 13 plans executed + reviewed +
+integrated (001 superseded). PDF/DOCX import upload deferred (see plan 014 notes).**
 
 Direction picks (from `/improve next`) being built: **D3** (007, trustworthy
 generation), **D1** (ATS score + report — spike+build, queued), **D4** (resume
