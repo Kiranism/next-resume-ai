@@ -31,13 +31,14 @@ import {
   useSidebar
 } from '@/components/ui/sidebar';
 import { navItems } from '@/constants/data';
-import { SignOutButton, useUser } from '@clerk/nextjs';
+import { useClerk, useUser } from '@clerk/nextjs';
 import {
   BadgeCheck,
   Bell,
   ChevronRight,
   ChevronsUpDown,
-  CreditCard
+  CreditCard,
+  PanelLeft
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -70,14 +71,15 @@ const UserInfo = ({ user }: { user: UserInfoProps }) => (
 
 export default function AppSidebar() {
   const { user } = useUser();
+  const { signOut } = useClerk();
   const pathname = usePathname();
-  const { state, isMobile } = useSidebar();
+  const { toggleSidebar, state } = useSidebar();
 
   return (
     <Sidebar collapsible='icon'>
       <SidebarHeader>
-        <div className='flex gap-2 py-2 text-sidebar-accent-foreground'>
-          <div className='flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground'>
+        <div className='text-sidebar-accent-foreground flex gap-2 py-2'>
+          <div className='bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg'>
             <company.logo className='size-4' />
           </div>
           <div className='grid flex-1 text-left text-sm leading-tight'>
@@ -95,52 +97,47 @@ export default function AppSidebar() {
               return item?.items && item?.items?.length > 0 ? (
                 <Collapsible
                   key={item.title}
-                  asChild
                   defaultOpen={item.isActive}
-                  className='group/collapsible'
+                  render={<SidebarMenuItem />}
                 >
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
+                  <CollapsibleTrigger
+                    render={
                       <SidebarMenuButton
                         tooltip={item.title}
                         isActive={pathname === item.url}
-                        className='group/menu-button rounded-lg bg-gradient-to-r hover:bg-transparent hover:from-sidebar-accent hover:to-sidebar-accent/40 data-[active=true]:from-primary/20 data-[active=true]:to-primary/5'
-                      >
-                        {item.icon && <Icon />}
-                        <span>{item.title}</span>
-                        <ChevronRight className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {item.items?.map((subItem) => (
-                          <SidebarMenuSubItem key={subItem.title}>
-                            <SidebarMenuSubButton
-                              asChild
-                              isActive={pathname === subItem.url}
-                            >
-                              <Link href={subItem.url}>
-                                <span>{subItem.title}</span>
-                              </Link>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </SidebarMenuItem>
+                        className='group/collapsible group/menu-button hover:from-sidebar-accent hover:to-sidebar-accent/40 data-[active=true]:from-primary/20 data-[active=true]:to-primary/5 rounded-lg bg-gradient-to-r hover:bg-transparent'
+                      />
+                    }
+                  >
+                    {item.icon && <Icon />}
+                    <span>{item.title}</span>
+                    <ChevronRight className='ml-auto transition-transform duration-200 group-data-panel-open/collapsible:rotate-90' />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {item.items?.map((subItem) => (
+                        <SidebarMenuSubItem key={subItem.title}>
+                          <SidebarMenuSubButton
+                            render={<Link href={subItem.url} />}
+                            isActive={pathname === subItem.url}
+                          >
+                            <span>{subItem.title}</span>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
                 </Collapsible>
               ) : (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                    asChild
+                    render={<Link href={item.url} />}
                     tooltip={item.title}
                     isActive={pathname === item.url}
-                    className='group/menu-button rounded-lg bg-gradient-to-r hover:bg-transparent hover:from-sidebar-accent hover:to-sidebar-accent/40 data-[active=true]:from-primary/20 data-[active=true]:to-primary/5'
+                    className='group/menu-button hover:from-sidebar-accent hover:to-sidebar-accent/40 data-[active=true]:from-primary/20 data-[active=true]:to-primary/5 rounded-lg bg-gradient-to-r hover:bg-transparent'
                   >
-                    <Link href={item.url}>
-                      <Icon className='text-muted-foreground/60 group-data-[active=true]/menu-button:text-primary' />
-                      <span>{item.title}</span>
-                    </Link>
+                    <Icon className='text-muted-foreground/60 group-data-[active=true]/menu-button:text-primary' />
+                    <span>{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               );
@@ -151,18 +148,29 @@ export default function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={toggleSidebar}
+              tooltip={state === 'expanded' ? 'Collapse' : 'Expand'}
+            >
+              <PanelLeft />
+              <span>{state === 'expanded' ? 'Collapse' : 'Expand'}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  size='lg'
-                  className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
-                >
-                  <UserInfo user={user} />
-                  <ChevronsUpDown className='ml-auto size-4' />
-                </SidebarMenuButton>
+              <DropdownMenuTrigger
+                render={
+                  <SidebarMenuButton
+                    size='lg'
+                    className='data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground'
+                  />
+                }
+              >
+                <UserInfo user={user} />
+                <ChevronsUpDown className='ml-auto size-4' />
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                className='w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg'
+                className='w-(--anchor-width) min-w-56 rounded-lg'
                 side='bottom'
                 align='end'
                 sideOffset={4}
@@ -189,10 +197,10 @@ export default function AppSidebar() {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <SignOutButton signOutOptions={{ redirectUrl: '/sign-in' }}>
-                    <div className='flex w-full items-center'>Log out</div>
-                  </SignOutButton>
+                <DropdownMenuItem
+                  onClick={() => signOut({ redirectUrl: '/sign-in' })}
+                >
+                  <div className='flex w-full items-center'>Log out</div>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

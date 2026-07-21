@@ -52,6 +52,9 @@ export const profileSchema = z.object({
   }),
   country: z.string().min(1, { message: 'Please select a country' }),
   city: z.string().min(1, { message: 'Please select a city' }),
+  linkedin: z.string().optional(),
+  github: z.string().optional(),
+  website: z.string().optional(),
   jobs: z.array(jobSchema),
   educations: z.array(educationSchema)
 });

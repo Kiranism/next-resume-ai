@@ -1,4 +1,4 @@
-import { Control } from 'react-hook-form';
+import { Control, useFieldArray } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import {
   FormControl,
@@ -16,8 +16,8 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { type TResumeEditFormValues } from '../utils/form-schema';
-import { useFieldArray } from 'react-hook-form';
 import { PlusCircle, Trash2 } from 'lucide-react';
+import { SectionShell } from './section-shell';
 
 interface ToolsProps {
   control: Control<TResumeEditFormValues>;
@@ -30,9 +30,10 @@ export const Tools = ({ control }: ToolsProps) => {
   });
 
   return (
-    <div className='space-y-6'>
-      <div className='flex items-center justify-between'>
-        <h2 className='text-2xl font-semibold'>Tools & Software</h2>
+    <SectionShell
+      title='Tools & Software'
+      sectionKey='tools'
+      action={
         <Button
           type='button'
           variant='outline'
@@ -47,8 +48,8 @@ export const Tools = ({ control }: ToolsProps) => {
           <PlusCircle className='mr-2 h-4 w-4' />
           Add Tool
         </Button>
-      </div>
-
+      }
+    >
       <div className='grid gap-4'>
         {fields.map((field, index) => (
           <div key={field.id} className='flex items-end gap-4'>
@@ -104,6 +105,6 @@ export const Tools = ({ control }: ToolsProps) => {
           </div>
         ))}
       </div>
-    </div>
+    </SectionShell>
   );
 };

@@ -70,3 +70,68 @@ export const useUploadPreviewImage = () => {
     }
   });
 };
+
+export const useResumeChatMessages = (resumeId: string) => {
+  return useQuery({
+    queryKey: ['resume-chat', resumeId],
+    queryFn: async () => {
+      const response = await client.chat.getMessages.$get({ resumeId });
+      return response.json();
+    },
+    enabled: !!resumeId,
+    // History is hydrated once into local state, then managed there.
+    staleTime: Infinity,
+    refetchOnWindowFocus: false
+  });
+};
+
+export const useClearResumeChat = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (resumeId: string) => {
+      const response = await client.chat.clearMessages.$post({ resumeId });
+      return response.json();
+    },
+    onSuccess: (_data, resumeId) => {
+      queryClient.invalidateQueries({ queryKey: ['resume-chat', resumeId] });
+    }
+  });
+};
+
+export const useAtsReport = (resumeId: string, enabled: boolean) => {
+  return useQuery({
+    queryKey: ['ats-report', resumeId],
+    queryFn: async () => {
+      const response = await client.ats.getReport.$get({ resumeId });
+      return await response.json();
+    },
+    enabled: enabled && !!resumeId,
+    staleTime: 60_000
+  });
+};
+
+export const useDeleteResume = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await client.resume.deleteResume.$post({ id });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['resumes'] });
+    }
+  });
+};
+
+export const useDuplicateResume = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await client.resume.duplicateResume.$post({ id });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['resumes'] });
+    }
+  });
+};

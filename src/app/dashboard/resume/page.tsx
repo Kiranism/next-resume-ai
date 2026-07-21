@@ -1,13 +1,14 @@
 import { Metadata } from 'next';
 import PageContainer from '@/components/layout/page-container';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ProfileFilter } from '@/features/resume/components/profile-filter';
 import { searchParamsCache, serialize } from '@/lib/searchparams';
 import { db } from '@/server/db';
-import { resumes, profiles, accounts } from '@/server/db/schema';
+import { resumes, accounts } from '@/server/db/schema';
 import { formatDistanceToNow } from 'date-fns';
-import { eq, inArray, and } from 'drizzle-orm';
-import { PlusIcon } from 'lucide-react';
+import { eq, and } from 'drizzle-orm';
+import { Building2, PlusIcon } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { SearchParams } from 'nuqs/server';
@@ -78,14 +79,14 @@ export default async function ResumePage({
         <Suspense key={key}>
           <div className='grid gap-6 sm:grid-cols-2 lg:grid-cols-4'>
             {/* Create New Resume Card */}
-            <Link href='/dashboard/resume/create'>
-              <Card className='group h-full cursor-pointer transition-all hover:border-primary hover:shadow-md'>
-                <CardContent className='flex h-[300px] flex-col items-center justify-center p-6'>
-                  <div className='mb-4 rounded-full bg-muted/10 p-4 group-hover:bg-primary/5'>
-                    <PlusIcon className='h-8 w-8 text-muted-foreground group-hover:text-primary' />
+            <Link href='/dashboard/resume/create' className='block'>
+              <Card className='group hover:border-primary h-[300px] cursor-pointer p-0 transition-all hover:shadow-md'>
+                <CardContent className='flex h-full flex-col items-center justify-center p-6'>
+                  <div className='bg-muted/10 group-hover:bg-primary/5 mb-4 rounded-full p-4'>
+                    <PlusIcon className='text-muted-foreground group-hover:text-primary h-8 w-8' />
                   </div>
                   <h3 className='text-lg font-semibold'>Create a new resume</h3>
-                  <p className='mt-2 text-center text-sm text-muted-foreground'>
+                  <p className='text-muted-foreground mt-2 text-center text-sm'>
                     Start building from scratch
                   </p>
                 </CardContent>
@@ -125,33 +126,46 @@ export default async function ResumePage({
               <Link
                 key={resume.id}
                 href={`/dashboard/resume/edit/${resume.id}`}
+                className='group block'
               >
-                <Card className='h-full cursor-pointer transition-all hover:border-primary hover:shadow-md'>
-                  <CardContent className='h-[300px] p-0'>
-                    <div className='relative h-full w-full overflow-hidden'>
-                      <Image
-                        src={
-                          resume.previewImageUrl ||
-                          '/templates/default.png' ||
-                          ''
-                        }
-                        alt={resume.jdJobTitle}
-                        fill
-                        className='absolute inset-0 h-full w-full object-contain'
-                      />
-                      <div className='absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4 text-white'>
-                        <h3 className='line-clamp-1 font-medium'>
-                          {resume.jdJobTitle}
-                        </h3>
-                        <p className='mt-1 text-xs opacity-90'>
-                          Last updated{' '}
-                          {formatDistanceToNow(new Date(resume.createdAt), {
-                            addSuffix: true
-                          })}
-                        </p>
-                      </div>
+                <Card className='hover:border-primary relative h-[300px] overflow-hidden p-0 transition-all hover:shadow-md'>
+                  <Image
+                    src={resume.previewImageUrl || '/templates/default.png'}
+                    alt={resume.jdJobTitle}
+                    fill
+                    sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw'
+                    className='object-cover object-top transition-transform duration-500 group-hover:scale-105'
+                  />
+
+                  {/* Fades so the overlays stay legible over any preview */}
+                  <div className='pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/70 to-transparent' />
+                  <div className='pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/90 via-black/50 to-transparent' />
+
+                  {/* Company / employer — scannable at a glance */}
+                  {resume.employer && (
+                    <div className='absolute inset-x-0 top-0 flex p-3'>
+                      <Badge
+                        variant='secondary'
+                        className='max-w-[calc(100%-1.5rem)] gap-1 shadow-sm'
+                      >
+                        <Building2 className='size-3 shrink-0' />
+                        <span className='truncate'>{resume.employer}</span>
+                      </Badge>
                     </div>
-                  </CardContent>
+                  )}
+
+                  {/* Title + meta */}
+                  <div className='absolute inset-x-0 bottom-0 flex flex-col gap-1 p-4 text-white'>
+                    <h3 className='line-clamp-2 text-base leading-tight font-semibold'>
+                      {resume.jdJobTitle}
+                    </h3>
+                    <p className='text-xs text-white/70'>
+                      Updated{' '}
+                      {formatDistanceToNow(new Date(resume.createdAt), {
+                        addSuffix: true
+                      })}
+                    </p>
+                  </div>
                 </Card>
               </Link>
             ))}

@@ -17,9 +17,11 @@ export const resumes = pgTable('resumes', {
   personalDetails: jsonb('personal_details'),
   jobs: jsonb('jobs').array(),
   education: jsonb('education').array(),
+  projects: jsonb('projects').array(),
   skills: jsonb('skills').array(),
   tools: jsonb('tools').array(),
   languages: jsonb('languages').array(),
+  hiddenSections: jsonb('hidden_sections').$type<string[]>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()
 });

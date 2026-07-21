@@ -21,13 +21,13 @@ type TResumeTemplateProps = {
 };
 
 const BulletedList = ({ items }: { items: { name: string }[] }) => (
-  <View>
+  <View style={tw('flex flex-col gap-1.5')}>
     {items.map((item, index) => (
       <View
-        style={tw('flex flex-row flex-wrap items-center gap-1')}
+        style={tw('flex flex-row flex-wrap items-center gap-1.5')}
         key={index}
       >
-        <Text style={tw('text-accent')}>━</Text>
+        <Text style={tw('text-accent text-xs')}>{'━'}</Text>
         <Text style={tw('text-sm')}>{item.name}</Text>
       </View>
     ))}
@@ -37,159 +37,204 @@ const BulletedList = ({ items }: { items: { name: string }[] }) => (
 export default function ResumeTemplateThree({
   formData
 }: TResumeTemplateProps) {
-  const hasSkills = formData?.skills?.length ?? 0 > 0;
-  const hasTools = formData?.tools?.length ?? 0 > 0;
-  const hasLanguages = formData?.languages?.length ?? 0 > 0;
-  const hasEducation = formData?.educations?.length ?? 0 > 0;
-  const hasJobs = formData?.jobs?.length ?? 0 > 0;
-  const hasSummary = formData?.personal_details?.summary;
+  const pd = formData?.personal_details;
+  const jobs = formData?.jobs ?? [];
+  const educations = formData?.educations ?? [];
+  const skills = formData?.skills ?? [];
+  const tools = formData?.tools ?? [];
+  const languages = formData?.languages ?? [];
+  const projects = formData?.projects ?? [];
+  const hidden = formData?.hiddenSections ?? [];
 
   return (
     <Document>
-      <Page size='A4' style={tw('p-8 bg-background')}>
+      <Page size='A4' style={tw('p-10 bg-background')}>
         {/* Header */}
-        <View style={tw('border-b border-secondary pb-4 mb-6')}>
-          <Text style={tw('text-4xl font-bold text-primary mb-2')}>
-            {formData?.personal_details?.fname ?? 'First Name'}{' '}
-            {formData?.personal_details?.lname ?? 'Last Name'}
+        <View style={tw('border-b border-secondary pb-3 mb-5')}>
+          <Text style={tw('text-3xl font-bold text-primary leading-none')}>
+            {pd?.fname ?? 'First Name'} {pd?.lname ?? 'Last Name'}
           </Text>
-          <View style={tw('flex flex-row gap-4')}>
-            {formData?.personal_details?.email && (
-              <Text style={tw('text-sm text-muted')}>
-                {formData.personal_details.email}
+          <View style={tw('flex flex-row flex-wrap gap-1.5 mt-1.5')}>
+            {pd?.email ? (
+              <Text style={tw('text-xs text-muted')}>{pd.email}</Text>
+            ) : null}
+            {pd?.phone ? (
+              <Text style={tw('text-xs text-muted')}>{'·  ' + pd.phone}</Text>
+            ) : null}
+            {pd?.city || pd?.country ? (
+              <Text style={tw('text-xs text-muted')}>
+                {'·  '}
+                {pd?.city}
+                {pd?.city && pd?.country ? ', ' : ''}
+                {pd?.country}
               </Text>
-            )}
-            {formData?.personal_details?.phone && (
-              <Text style={tw('text-sm text-muted')}>
-                {formData.personal_details.phone}
+            ) : null}
+            {pd?.linkedin ? (
+              <Text style={tw('text-xs text-muted')}>
+                {'·  ' + pd.linkedin}
               </Text>
-            )}
-            {(formData?.personal_details?.city ||
-              formData?.personal_details?.country) && (
-              <Text style={tw('text-sm text-muted')}>
-                {formData?.personal_details?.city}
-                {formData?.personal_details?.city &&
-                  formData?.personal_details?.country &&
-                  ', '}
-                {formData?.personal_details?.country}
-              </Text>
-            )}
+            ) : null}
+            {pd?.github ? (
+              <Text style={tw('text-xs text-muted')}>{'·  ' + pd.github}</Text>
+            ) : null}
+            {pd?.website ? (
+              <Text style={tw('text-xs text-muted')}>{'·  ' + pd.website}</Text>
+            ) : null}
           </View>
         </View>
 
-        {/* Main Content */}
+        {/* Main */}
         <View style={tw('flex flex-row gap-8')}>
-          {/* Left Column - 70% */}
-          <View style={tw('flex-[0.7] space-y-6')}>
-            {hasSummary && (
-              <View>
+          {/* Left column - 70% */}
+          <View style={tw('flex flex-[0.7] flex-col')}>
+            {!hidden.includes('summary') && pd?.summary ? (
+              <View style={tw('mb-5')}>
                 <Text style={tw('text-lg font-bold text-accent mb-2')}>
                   Professional Summary
                 </Text>
-                <Text style={tw('text-sm leading-relaxed')}>
-                  {formData?.personal_details?.summary ?? ''}
-                </Text>
+                <Text style={tw('text-sm leading-relaxed')}>{pd.summary}</Text>
               </View>
-            )}
+            ) : null}
 
-            {hasJobs && (
-              <View>
+            {!hidden.includes('experience') && jobs.length > 0 ? (
+              <View style={tw('mb-5')}>
                 <Text style={tw('text-lg font-bold text-accent mb-2')}>
                   Work Experience
                 </Text>
-                <View style={tw('space-y-4')}>
-                  {formData?.jobs?.map((job, index) => (
-                    <View key={index} wrap={false}>
-                      <Text style={tw('font-bold text-primary')}>
-                        {job?.jobTitle ?? ''}{' '}
-                        {job?.employer && `| ${job.employer}`}
-                      </Text>
-                      {(job?.startDate || job?.endDate) && (
-                        <Text style={tw('text-sm text-muted mb-1')}>
-                          {job?.startDate ?? ''} - {job?.endDate ?? ''}
+                <View>
+                  {jobs.map((job, i) => (
+                    <View key={i} wrap={false} style={tw('mb-3')}>
+                      <View
+                        style={tw(
+                          'flex flex-row justify-between items-baseline'
+                        )}
+                      >
+                        <Text style={tw('text-base font-bold text-primary')}>
+                          {job?.jobTitle ?? ''}
+                          {job?.employer ? ` · ${job.employer}` : ''}
                         </Text>
-                      )}
-                      {job?.description && (
-                        <Text style={tw('text-sm')}>{job.description}</Text>
-                      )}
+                        {job?.startDate || job?.endDate ? (
+                          <Text style={tw('text-xs text-muted')}>
+                            {job?.startDate ?? ''} – {job?.endDate ?? ''}
+                          </Text>
+                        ) : null}
+                      </View>
+                      {job?.description ? (
+                        <Text style={tw('text-sm mt-1 leading-relaxed')}>
+                          {job.description}
+                        </Text>
+                      ) : null}
                     </View>
                   ))}
                 </View>
               </View>
-            )}
+            ) : null}
 
-            {hasEducation && (
-              <View>
+            {!hidden.includes('projects') && projects.length > 0 ? (
+              <View style={tw('mb-5')}>
+                <Text style={tw('text-lg font-bold text-accent mb-2')}>
+                  Projects
+                </Text>
+                <View>
+                  {projects.map((proj, i) => (
+                    <View key={i} wrap={false} style={tw('mb-3')}>
+                      <View
+                        style={tw(
+                          'flex flex-row justify-between items-baseline'
+                        )}
+                      >
+                        <Text style={tw('text-base font-bold text-primary')}>
+                          {proj?.name ?? ''}
+                        </Text>
+                        {proj?.link ? (
+                          <Text style={tw('text-xs text-muted')}>
+                            {proj.link}
+                          </Text>
+                        ) : null}
+                      </View>
+                      {proj?.description ? (
+                        <Text style={tw('text-sm mt-1 leading-relaxed')}>
+                          {proj.description}
+                        </Text>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
+            {!hidden.includes('education') && educations.length > 0 ? (
+              <View style={tw('mb-5')}>
                 <Text style={tw('text-lg font-bold text-accent mb-2')}>
                   Education
                 </Text>
-                <View style={tw('space-y-4')}>
-                  {formData?.educations?.map((edu, index) => (
-                    <View key={index}>
-                      <Text style={tw('font-bold text-primary')}>
-                        {edu?.degree ?? ''} {edu?.field && `in ${edu.field}`}
-                      </Text>
-                      <Text style={tw('text-sm text-muted mb-1')}>
-                        {edu?.school && `${edu.school}`}
-                        {(edu?.startDate || edu?.endDate) && ' | '}
-                        {edu?.startDate ?? ''} - {edu?.endDate ?? ''}
-                      </Text>
-                      {edu?.description && (
-                        <Text style={tw('text-sm')}>{edu.description}</Text>
-                      )}
+                <View>
+                  {educations.map((edu, i) => (
+                    <View key={i} wrap={false} style={tw('mb-3')}>
+                      <View
+                        style={tw(
+                          'flex flex-row justify-between items-baseline'
+                        )}
+                      >
+                        <Text style={tw('text-base font-bold text-primary')}>
+                          {edu?.degree ?? ''}
+                          {edu?.field ? ` in ${edu.field}` : ''}
+                        </Text>
+                        {edu?.startDate || edu?.endDate ? (
+                          <Text style={tw('text-xs text-muted')}>
+                            {edu?.startDate ?? ''} – {edu?.endDate ?? ''}
+                          </Text>
+                        ) : null}
+                      </View>
+                      {edu?.school ? (
+                        <Text style={tw('text-xs text-muted mt-0.5')}>
+                          {edu.school}
+                        </Text>
+                      ) : null}
+                      {edu?.description ? (
+                        <Text style={tw('text-sm mt-1 leading-relaxed')}>
+                          {edu.description}
+                        </Text>
+                      ) : null}
                     </View>
                   ))}
                 </View>
               </View>
-            )}
+            ) : null}
           </View>
 
-          {/* Right Column - 30% */}
-          <View style={tw('flex-[0.3] space-y-6')}>
-            {hasSkills && (
-              <View>
+          {/* Right column - 30% */}
+          <View style={tw('flex flex-[0.3] flex-col')}>
+            {!hidden.includes('skills') && skills.length > 0 ? (
+              <View style={tw('mb-5')}>
                 <Text style={tw('text-lg font-bold text-accent mb-2')}>
                   Skills
                 </Text>
                 <BulletedList
-                  items={
-                    formData?.skills?.map((skill) => ({
-                      name: skill.skill_name
-                    })) ?? []
-                  }
+                  items={skills.map((s) => ({ name: s.skill_name }))}
                 />
               </View>
-            )}
-
-            {hasTools && (
-              <View>
+            ) : null}
+            {!hidden.includes('tools') && tools.length > 0 ? (
+              <View style={tw('mb-5')}>
                 <Text style={tw('text-lg font-bold text-accent mb-2')}>
                   Tools
                 </Text>
                 <BulletedList
-                  items={
-                    formData?.tools?.map((tool) => ({
-                      name: tool.tool_name
-                    })) ?? []
-                  }
+                  items={tools.map((t) => ({ name: t.tool_name }))}
                 />
               </View>
-            )}
-
-            {hasLanguages && (
-              <View>
+            ) : null}
+            {!hidden.includes('languages') && languages.length > 0 ? (
+              <View style={tw('mb-5')}>
                 <Text style={tw('text-lg font-bold text-accent mb-2')}>
                   Languages
                 </Text>
                 <BulletedList
-                  items={
-                    formData?.languages?.map((lang) => ({
-                      name: lang.lang_name
-                    })) ?? []
-                  }
+                  items={languages.map((l) => ({ name: l.lang_name }))}
                 />
               </View>
-            )}
+            ) : null}
           </View>
         </View>
       </Page>

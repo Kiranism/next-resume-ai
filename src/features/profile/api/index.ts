@@ -15,6 +15,17 @@ export const useProfiles = () => {
   });
 };
 
+export const useProfile = (id: string) => {
+  return useQuery({
+    queryKey: ['profile', id],
+    queryFn: async () => {
+      const response = await client.profile.getProfile.$get({ id });
+      return await response.json();
+    },
+    enabled: !!id
+  });
+};
+
 export const useCreateProfile = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -45,6 +56,32 @@ export const useUpdateProfile = () => {
       queryClient.invalidateQueries({
         queryKey: ['profiles']
       });
+    }
+  });
+};
+
+export const useDeleteProfile = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await client.profile.deleteProfile.$post({ id });
+      return await response.json();
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+    }
+  });
+};
+
+export const useImportProfile = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (text: string) => {
+      const response = await client.profile.importProfile.$post({ text });
+      return await response.json();
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
     }
   });
 };

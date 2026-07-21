@@ -14,6 +14,9 @@ export const profiles = pgTable('profiles', {
   contactno: text('contact_no').notNull(),
   country: text('country').notNull(),
   city: text('city').notNull(),
+  linkedin: text('linkedin'),
+  github: text('github'),
+  website: text('website'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()
 });

@@ -11,32 +11,32 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { SignOutButton, useUser } from '@clerk/nextjs';
+import { useClerk, useUser } from '@clerk/nextjs';
 
 export function UserNav() {
   const { user } = useUser();
+  const { signOut } = useClerk();
 
   if (user) {
     return (
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant='ghost' className='relative h-8 w-8 rounded-full'>
-            <Avatar className='h-8 w-8'>
-              <AvatarImage
-                src={user.imageUrl || ''}
-                alt={user.fullName || ''}
-              />
-              <AvatarFallback>{user.firstName?.[0]}</AvatarFallback>
-            </Avatar>
-          </Button>
+        <DropdownMenuTrigger
+          render={
+            <Button variant='ghost' className='relative h-8 w-8 rounded-full' />
+          }
+        >
+          <Avatar className='h-8 w-8'>
+            <AvatarImage src={user.imageUrl || ''} alt={user.fullName || ''} />
+            <AvatarFallback>{user.firstName?.[0]}</AvatarFallback>
+          </Avatar>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className='w-56' align='end' forceMount>
+        <DropdownMenuContent className='w-56' align='end'>
           <DropdownMenuLabel className='font-normal'>
             <div className='flex flex-col space-y-1'>
-              <p className='text-sm font-medium leading-none'>
+              <p className='text-sm leading-none font-medium'>
                 {user.fullName}
               </p>
-              <p className='text-xs leading-none text-muted-foreground'>
+              <p className='text-muted-foreground text-xs leading-none'>
                 {user.primaryEmailAddress?.emailAddress}
               </p>
             </div>
@@ -58,13 +58,13 @@ export function UserNav() {
             <DropdownMenuItem>New Team</DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem asChild>
-            <SignOutButton signOutOptions={{ redirectUrl: '/sign-in' }}>
-              <div className='flex w-full items-center justify-between'>
-                Log out
-                <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
-              </div>
-            </SignOutButton>
+          <DropdownMenuItem
+            onClick={() => signOut({ redirectUrl: '/sign-in' })}
+          >
+            <div className='flex w-full items-center justify-between'>
+              Log out
+              <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
+            </div>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

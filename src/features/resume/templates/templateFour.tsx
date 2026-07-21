@@ -1,3 +1,4 @@
+import { ReactNode } from 'react';
 import { TResumeEditFormValues } from '../utils/form-schema';
 import { Document, Page, Text, View } from '@react-pdf/renderer';
 import { createTw } from 'react-pdf-tailwind';
@@ -20,133 +21,171 @@ type TResumeTemplateProps = {
   formData: TResumeEditFormValues;
 };
 
-const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-  <View style={tw('border-b border-accent mb-3')}>
-    <Text style={tw('text-lg font-bold text-primary mb-1')}>{children}</Text>
+const SectionTitle = ({ children }: { children: ReactNode }) => (
+  // minPresenceAhead keeps a header from being orphaned at the bottom of a page.
+  <View style={tw('border-b border-accent mb-2 pb-1')} minPresenceAhead={24}>
+    <Text style={tw('text-base font-bold text-primary')}>{children}</Text>
   </View>
 );
 
 const BulletPoint = ({ text }: { text: string }) => (
   <View style={tw('flex flex-row items-start gap-2')}>
-    <Text style={tw('text-accent')}>•</Text>
-    <Text style={tw('text-sm flex-1')}>{text}</Text>
+    <Text style={tw('text-accent text-xs')}>•</Text>
+    <Text style={tw('text-sm flex-1 leading-relaxed')}>{text}</Text>
   </View>
 );
 
 export default function TemplateFour({ formData }: TResumeTemplateProps) {
-  const hasSkills = formData?.skills?.length ?? 0 > 0;
-  const hasJobs = formData?.jobs?.length ?? 0 > 0;
-  const hasTools = formData?.tools?.length ?? 0 > 0;
-  const hasEducation = formData?.educations?.length ?? 0 > 0;
+  const pd = formData?.personal_details;
+  const skills = (formData?.skills ?? [])
+    .map((s) => s.skill_name)
+    .filter(Boolean);
+  const tools = (formData?.tools ?? []).map((t) => t.tool_name).filter(Boolean);
+  const languages = (formData?.languages ?? [])
+    .map((l) => l.lang_name)
+    .filter(Boolean);
+  const jobs = formData?.jobs ?? [];
+  const educations = formData?.educations ?? [];
+  const projects = formData?.projects ?? [];
+  const hidden = formData?.hiddenSections ?? [];
+
+  const contact = [
+    pd?.phone,
+    pd?.email,
+    [pd?.city, pd?.country].filter(Boolean).join(', '),
+    pd?.linkedin,
+    pd?.github,
+    pd?.website
+  ]
+    .filter(Boolean)
+    .join('   ·   ');
 
   return (
     <Document>
       <Page size='A4' style={tw('p-10')}>
-        {/* Header - Always show */}
+        {/* Header */}
         <View style={tw('mb-6 text-center')}>
-          <Text style={tw('text-3xl font-bold mb-2')}>
-            {formData?.personal_details?.fname ?? ''}{' '}
-            {formData?.personal_details?.lname ?? ''}
+          <Text style={tw('text-3xl font-bold leading-none')}>
+            {pd?.fname ?? ''} {pd?.lname ?? ''}
           </Text>
-          <View style={tw('flex flex-row justify-center gap-4')}>
-            {formData?.personal_details?.phone && (
-              <Text style={tw('text-sm')}>
-                {formData.personal_details.phone}
-              </Text>
-            )}
-            {formData?.personal_details?.email && (
-              <Text style={tw('text-sm')}>
-                {formData.personal_details.email}
-              </Text>
-            )}
-            {(formData?.personal_details?.city ||
-              formData?.personal_details?.country) && (
-              <Text style={tw('text-sm')}>
-                {formData?.personal_details?.city}
-                {formData?.personal_details?.city &&
-                  formData?.personal_details?.country &&
-                  ', '}
-                {formData?.personal_details?.country}
-              </Text>
-            )}
-          </View>
+          {contact ? (
+            <Text style={tw('text-xs text-muted mt-2')}>{contact}</Text>
+          ) : null}
         </View>
 
-        {/* Technical Skills */}
-        {hasSkills && (
-          <View style={tw('mb-6')}>
+        {!hidden.includes('skills') && skills.length > 0 ? (
+          <View style={tw('mb-5')}>
             <SectionTitle>Technical Skills</SectionTitle>
-            <View style={tw('flex flex-row flex-wrap gap-1')}>
-              {formData?.skills?.map((skill, index) => (
-                <Text key={index} style={tw('text-sm')}>
-                  {skill?.skill_name}
-                  {index < (formData?.skills?.length ?? 0) - 1 ? ', ' : ''}
-                </Text>
+            <Text style={tw('text-sm leading-relaxed')}>
+              {skills.join(', ')}
+            </Text>
+          </View>
+        ) : null}
+
+        {!hidden.includes('experience') && jobs.length > 0 ? (
+          <View style={tw('mb-5')}>
+            <SectionTitle>Work Experience</SectionTitle>
+            <View>
+              {jobs.map((job, index) => (
+                <View key={index} wrap={false} style={tw('mb-3')}>
+                  <View
+                    style={tw('flex flex-row justify-between items-baseline')}
+                  >
+                    <Text style={tw('text-sm font-bold text-primary')}>
+                      {job?.employer ?? ''}
+                    </Text>
+                    {job?.startDate || job?.endDate ? (
+                      <Text style={tw('text-xs text-muted')}>
+                        {job?.startDate ?? ''} – {job?.endDate ?? ''}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Text style={tw('text-sm font-bold text-secondary')}>
+                    {job?.jobTitle ?? ''}
+                  </Text>
+                  {job?.description ? (
+                    <View style={tw('mt-1')}>
+                      <BulletPoint text={job.description} />
+                    </View>
+                  ) : null}
+                </View>
               ))}
             </View>
           </View>
-        )}
+        ) : null}
 
-        {/* Work Experience */}
-        {hasJobs && (
-          <View style={tw('mb-6')}>
-            <SectionTitle>Work Experience</SectionTitle>
-            {formData?.jobs?.map((job, index) => (
-              <View key={index} style={tw('mb-4')} wrap={false}>
-                <View style={tw('flex flex-row justify-between mb-1')}>
-                  <Text style={tw('font-bold text-sm')}>
-                    {job?.employer ?? ''}
-                  </Text>
-                  <Text style={tw('text-sm text-accent')}>
-                    {job?.startDate ?? ''} - {job?.endDate ?? ''}
-                  </Text>
-                </View>
-                <Text style={tw('text-sm font-bold mb-1')}>
-                  {job?.jobTitle ?? ''}
-                </Text>
-                {job?.description && <BulletPoint text={job.description} />}
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* Projects */}
-        {hasTools && (
-          <View style={tw('mb-6')}>
+        {!hidden.includes('projects') && projects.length > 0 ? (
+          <View style={tw('mb-5')}>
             <SectionTitle>Projects</SectionTitle>
-            {formData?.tools?.map((tool, index) => (
-              <View key={index} style={tw('mb-3')}>
-                <Text style={tw('font-bold text-sm mb-1')}>
-                  {tool?.tool_name ?? ''}
-                </Text>
-                <BulletPoint text={tool?.proficiency_level ?? ''} />
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* Education */}
-        {hasEducation && (
-          <View style={tw('mb-6')}>
-            <SectionTitle>Education</SectionTitle>
-            {formData?.educations?.map((edu, index) => (
-              <View key={index} style={tw('mb-3')}>
-                <View style={tw('flex flex-row justify-between mb-1')}>
-                  <Text style={tw('font-bold text-sm')}>
-                    {edu?.degree ?? ''} {edu?.field && `in ${edu.field}`}
-                  </Text>
-                  {(edu?.startDate || edu?.endDate) && (
-                    <Text style={tw('text-sm text-accent')}>
-                      {edu?.startDate ?? ''} - {edu?.endDate ?? ''}
+            <View>
+              {projects.map((proj, index) => (
+                <View key={index} wrap={false} style={tw('mb-3')}>
+                  <View
+                    style={tw('flex flex-row justify-between items-baseline')}
+                  >
+                    <Text style={tw('text-sm font-bold text-primary')}>
+                      {proj?.name ?? ''}
                     </Text>
-                  )}
+                    {proj?.link ? (
+                      <Text style={tw('text-xs text-muted')}>{proj.link}</Text>
+                    ) : null}
+                  </View>
+                  {proj?.description ? (
+                    <View style={tw('mt-1')}>
+                      <BulletPoint text={proj.description} />
+                    </View>
+                  ) : null}
                 </View>
-                {edu?.school && <Text style={tw('text-sm')}>{edu.school}</Text>}
-                {edu?.description && <BulletPoint text={edu.description} />}
-              </View>
-            ))}
+              ))}
+            </View>
           </View>
-        )}
+        ) : null}
+
+        {!hidden.includes('tools') && tools.length > 0 ? (
+          <View style={tw('mb-5')}>
+            <SectionTitle>Tools</SectionTitle>
+            <Text style={tw('text-sm leading-relaxed')}>
+              {tools.join(', ')}
+            </Text>
+          </View>
+        ) : null}
+
+        {!hidden.includes('education') && educations.length > 0 ? (
+          <View style={tw('mb-5')}>
+            <SectionTitle>Education</SectionTitle>
+            <View>
+              {educations.map((edu, index) => (
+                <View key={index} wrap={false} style={tw('mb-2')}>
+                  <View
+                    style={tw('flex flex-row justify-between items-baseline')}
+                  >
+                    <Text style={tw('text-sm font-bold text-primary')}>
+                      {edu?.degree ?? ''}
+                      {edu?.field ? ` in ${edu.field}` : ''}
+                    </Text>
+                    {edu?.startDate || edu?.endDate ? (
+                      <Text style={tw('text-xs text-muted')}>
+                        {edu?.startDate ?? ''} – {edu?.endDate ?? ''}
+                      </Text>
+                    ) : null}
+                  </View>
+                  {edu?.school ? (
+                    <Text style={tw('text-xs text-muted')}>{edu.school}</Text>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        {!hidden.includes('languages') && languages.length > 0 ? (
+          <View style={tw('mb-5')}>
+            <SectionTitle>Languages</SectionTitle>
+            <Text style={tw('text-sm leading-relaxed')}>
+              {languages.join(', ')}
+            </Text>
+          </View>
+        ) : null}
       </Page>
     </Document>
   );

@@ -6,10 +6,14 @@ import {
   ResizablePanelGroup
 } from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useSidebar } from '@/components/ui/sidebar';
 import { EditResumeForm } from '@/features/resume/components/edit-resume-form';
 import { ModeToggle } from '@/features/resume/components/mode-toggle';
 import PdfRenderer from '@/features/resume/components/pdf-renderer';
+import { ResumeChat } from '@/features/resume/components/resume-chat';
+import { AutosaveIndicator } from '@/features/resume/components/autosave-indicator';
 import { TemplateSelection } from '@/features/resume/components/template-selection';
+import { useAutosaveResume } from '@/features/resume/hooks/use-autosave-resume';
 import { useTemplateStore } from '@/features/resume/store/use-template-store';
 import {
   resumeEditFormSchema,
@@ -17,7 +21,7 @@ import {
 } from '@/features/resume/utils/form-schema';
 import { Resume } from '@/server/db/schema/resumes';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 interface ResumeEditContentProps {
@@ -25,9 +29,9 @@ interface ResumeEditContentProps {
 }
 
 export function ResumeEditContent({ resume }: ResumeEditContentProps) {
-  const [mode, setMode] = useState<'edit' | 'template' | 'preview' | 'zen'>(
-    'edit'
-  );
+  const [mode, setMode] = useState<
+    'edit' | 'template' | 'chat' | 'preview' | 'zen'
+  >('edit');
 
   const {
     selectedTemplate,
@@ -48,13 +52,12 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
       resume?.personalDetails as TResumeEditFormValues['personal_details'],
     jobs: resume?.jobs as TResumeEditFormValues['jobs'],
     educations: resume?.education as TResumeEditFormValues['educations'],
+    projects: resume?.projects as TResumeEditFormValues['projects'],
     skills: resume?.skills as TResumeEditFormValues['skills'],
     tools: resume?.tools as TResumeEditFormValues['tools'],
-    languages: resume?.languages as TResumeEditFormValues['languages']
+    languages: resume?.languages as TResumeEditFormValues['languages'],
+    hiddenSections: (resume?.hiddenSections as string[] | null) ?? []
   };
-
-  console.log('resume data', resume);
-  console.log('intialdata', initalData);
 
   const form = useForm<TResumeEditFormValues>({
     resolver: zodResolver(resumeEditFormSchema),
@@ -64,6 +67,20 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
   });
 
   const formData = form.watch();
+
+  // Background auto-save: debounced on manual edits, immediate (via saveNow) on
+  // AI edits / undo triggered from the chat panel.
+  const { autosaveState, saveNow } = useAutosaveResume(form);
+
+  // The edit page hides the dashboard header (which holds the sidebar toggle),
+  // so collapse the sidebar here for more room; restore it on the way out.
+  const { setOpen, open } = useSidebar();
+  const initialSidebarOpen = useRef(open);
+  useEffect(() => {
+    const restore = initialSidebarOpen.current;
+    setOpen(false);
+    return () => setOpen(restore);
+  }, [setOpen]);
 
   const handleApplyTemplate = (templateId: string) => {
     applyTemplate(templateId);
@@ -85,25 +102,7 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
         />
       );
     }
-    if (mode === 'preview') {
-      return (
-        <div className='relative flex h-full justify-center bg-accent pt-4'>
-          <div className='origin-top scale-75'>
-            <PdfRenderer formData={formData} templateId={selectedTemplate} />
-          </div>
-        </div>
-      );
-    }
   };
-
-  // Extract PDF preview component
-  const PdfPreview = () => (
-    <div className='relative flex h-full justify-center bg-accent pt-2'>
-      <div className='scale-90'>
-        <PdfRenderer formData={formData} templateId={selectedTemplate} />
-      </div>
-    </div>
-  );
 
   return (
     <div className='h-full p-4'>
@@ -124,17 +123,30 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
               <div className='hidden md:block'>
                 <ModeToggle mode={mode} onModeChange={setMode} />
               </div>
-              <ScrollArea className='h-[calc(100vh-120px)] pr-10'>
-                {mode !== 'preview' && renderContent()}
-              </ScrollArea>
+              {mode === 'chat' ? (
+                <div className='h-[calc(100vh-120px)]'>
+                  <ResumeChat
+                    form={form}
+                    resumeId={resume.id}
+                    saveNow={saveNow}
+                    autosaveState={autosaveState}
+                  />
+                </div>
+              ) : (
+                <ScrollArea className='h-[calc(100vh-120px)] pr-10'>
+                  {renderContent()}
+                </ScrollArea>
+              )}
             </div>
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel defaultSize={55} minSize={45}>
             <div className='h-full w-full'>
-              <ScrollArea className='h-[calc(100vh)]'>
-                <PdfPreview />
-              </ScrollArea>
+              <PdfRenderer
+                formData={formData}
+                templateId={selectedTemplate}
+                actions={<AutosaveIndicator state={autosaveState} />}
+              />
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -144,9 +156,27 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
       <div className='block h-full md:hidden'>
         <div className='h-full w-full rounded-lg border'>
           <div className='h-full w-full p-4'>
-            <ScrollArea className='h-[calc(100vh-150px)]'>
-              {renderContent()}
-            </ScrollArea>
+            {mode === 'chat' ? (
+              <div className='h-[calc(100vh-150px)]'>
+                <ResumeChat
+                  form={form}
+                  resumeId={resume.id}
+                  saveNow={saveNow}
+                  autosaveState={autosaveState}
+                />
+              </div>
+            ) : mode === 'preview' ? (
+              <div className='h-[calc(100vh-150px)]'>
+                <PdfRenderer
+                  formData={formData}
+                  templateId={selectedTemplate}
+                />
+              </div>
+            ) : (
+              <ScrollArea className='h-[calc(100vh-150px)]'>
+                {renderContent()}
+              </ScrollArea>
+            )}
           </div>
         </div>
       </div>

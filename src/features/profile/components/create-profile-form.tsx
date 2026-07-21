@@ -18,12 +18,12 @@ import { ArrowLeft, ArrowRight, Check, PlusCircle, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { SubmitHandler, useFieldArray, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 import { useCreateProfile, useUpdateProfile } from '../api';
 import { profileSchema, TProfileFormValues } from '../utils/form-schema';
 
 interface CreateProfileFormProps {
   profile?: ProfileWithRelations;
-  closeModal: () => void;
 }
 
 const transformProfileToFormValues = (
@@ -37,6 +37,9 @@ const transformProfileToFormValues = (
       contactno: '',
       country: '',
       city: '',
+      linkedin: '',
+      github: '',
+      website: '',
       jobs: [],
       educations: []
     };
@@ -49,6 +52,9 @@ const transformProfileToFormValues = (
     contactno: profile.contactno,
     country: profile.country,
     city: profile.city,
+    linkedin: profile.linkedin || '',
+    github: profile.github || '',
+    website: profile.website || '',
     jobs: profile.jobs.map((job) => ({
       jobTitle: job.jobTitle || '',
       employer: job.employer || '',
@@ -72,14 +78,12 @@ const transformProfileToFormValues = (
   };
 };
 
-export default function CreateProfileForm({
-  profile,
-  closeModal
-}: CreateProfileFormProps) {
+export default function CreateProfileForm({ profile }: CreateProfileFormProps) {
   const { mutateAsync: createProfile, isPending: isCreating } =
     useCreateProfile();
   const { mutateAsync: updateProfile, isPending: isUpdating } =
     useUpdateProfile();
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [isReviewStep, setIsReviewStep] = useState(false);
 
@@ -115,7 +119,8 @@ export default function CreateProfileForm({
         await createProfile(data);
         toast.success('Profile created successfully');
       }
-      closeModal();
+      router.push('/dashboard/profile');
+      router.refresh();
     } catch (error) {
       console.error('Profile submission error:', error);
       toast.error('Failed to submit profile. Please try again.');
@@ -329,6 +334,60 @@ export default function CreateProfileForm({
                   <FormLabel>City</FormLabel>
                   <FormControl>
                     <Input placeholder='Enter city' {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='linkedin'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>LinkedIn (optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='linkedin.com/in/you'
+                      {...field}
+                      value={field.value ?? ''}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='github'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>GitHub (optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='github.com/you'
+                      {...field}
+                      value={field.value ?? ''}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='website'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Portfolio / Website (optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='yoursite.com'
+                      {...field}
+                      value={field.value ?? ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

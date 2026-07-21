@@ -4,6 +4,7 @@ import TemplateOne from './templateOne';
 import TemplateTwo from './templateTwo';
 import TemplateThree from './templateThree';
 import TemplateFour from './templateFour';
+import TemplateFive from './templateFive';
 
 export type ResumeTemplateProps = {
   formData: TResumeEditFormValues;
@@ -45,6 +46,14 @@ const templateRegistry: Record<string, TemplateConfig> = {
     thumbnail: '/templates/default.png',
     description: 'Modern design with creative layout and color accents',
     component: TemplateFour
+  },
+  'template-five': {
+    id: 'template-five',
+    name: 'ATS Friendly',
+    thumbnail: '/templates/default.png',
+    description:
+      'Single-column, parser-safe layout optimized for ATS keyword scanning',
+    component: TemplateFive
   }
 };
 

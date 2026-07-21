@@ -1,6 +1,6 @@
 import * as React from 'react';
-import * as LabelPrimitive from '@radix-ui/react-label';
-import { Slot } from '@radix-ui/react-slot';
+import { mergeProps } from '@base-ui/react/merge-props';
+import { useRender } from '@base-ui/react/use-render';
 import {
   Controller,
   ControllerProps,
@@ -88,44 +88,43 @@ const FormItem = React.forwardRef<
 });
 FormItem.displayName = 'FormItem';
 
-const FormLabel = React.forwardRef<
-  React.ElementRef<typeof LabelPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root>
->(({ className, ...props }, ref) => {
+const FormLabel = ({
+  className,
+  ...props
+}: React.ComponentProps<typeof Label>) => {
   const { error, formItemId } = useFormField();
 
   return (
     <Label
-      ref={ref}
       className={cn(error && 'text-destructive', className)}
       htmlFor={formItemId}
       {...props}
     />
   );
-});
+};
 FormLabel.displayName = 'FormLabel';
 
-const FormControl = React.forwardRef<
-  React.ElementRef<typeof Slot>,
-  React.ComponentPropsWithoutRef<typeof Slot>
->(({ ...props }, ref) => {
+// Base UI's useRender replaces Radix Slot: it merges the field's a11y wiring
+// (id/aria-*) onto whatever single element is passed as children, so consumers
+// keep the `<FormControl><Input /></FormControl>` API unchanged.
+function FormControl({ children, ...props }: React.ComponentProps<'input'>) {
   const { error, formItemId, formDescriptionId, formMessageId } =
     useFormField();
 
-  return (
-    <Slot
-      ref={ref}
-      id={formItemId}
-      aria-describedby={
-        !error
+  return useRender({
+    render: children as React.ReactElement,
+    props: mergeProps<'input'>(
+      {
+        id: formItemId,
+        'aria-describedby': !error
           ? `${formDescriptionId}`
-          : `${formDescriptionId} ${formMessageId}`
-      }
-      aria-invalid={!!error}
-      {...props}
-    />
-  );
-});
+          : `${formDescriptionId} ${formMessageId}`,
+        'aria-invalid': !!error
+      },
+      props
+    )
+  });
+}
 FormControl.displayName = 'FormControl';
 
 const FormDescription = React.forwardRef<
@@ -138,7 +137,7 @@ const FormDescription = React.forwardRef<
     <p
       ref={ref}
       id={formDescriptionId}
-      className={cn('text-[0.8rem] text-muted-foreground', className)}
+      className={cn('text-muted-foreground text-[0.8rem]', className)}
       {...props}
     />
   );
@@ -160,7 +159,7 @@ const FormMessage = React.forwardRef<
     <p
       ref={ref}
       id={formMessageId}
-      className={cn('text-[0.8rem] font-medium text-destructive', className)}
+      className={cn('text-destructive text-[0.8rem] font-medium', className)}
       {...props}
     >
       {body}

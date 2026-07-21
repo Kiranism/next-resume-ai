@@ -2,36 +2,60 @@ import {
   resumeFormSchema,
   TResumeEditFormValues
 } from '@/features/resume/utils/form-schema';
-import { AIChatSession } from './google-ai-model';
-import { resumeEditFormSchema } from '@/features/resume/utils/form-schema';
-import { ZodObject } from 'zod';
+import { generateJsonContent } from './ai-model';
+import { ATS_WRITING_GUIDELINES } from './resume-guidance';
+import { z } from 'zod';
 import { Profile } from '@/server/db/schema/profiles';
 import { ProfileWithRelations } from '../routers/profile-router';
 
-function getSchemaStructure(schema: ZodObject<any>) {
-  const shape = schema.shape;
-  return JSON.stringify(
-    shape,
-    (key, value) => {
-      if (value?._def?.typeName === 'ZodObject') {
-        return getSchemaStructure(value);
-      }
-      if (value?._def?.typeName === 'ZodArray') {
-        return [getSchemaStructure(value._def.type)];
-      }
-      if (value?._def?.typeName === 'ZodString') {
-        return 'string';
-      }
-      if (value?._def?.typeName === 'ZodOptional') {
-        return value._def.innerType._def.typeName === 'ZodString'
-          ? 'string'
-          : value._def.innerType;
-      }
-      return value;
-    },
-    2
-  );
-}
+// Lenient item schemas: accept a plain string OR an object and normalize to the
+// expected { <name>, proficiency_level } shape; never throw (per-item .catch).
+const skillItem = z
+  .preprocess(
+    (v) => (typeof v === 'string' ? { skill_name: v } : v),
+    z.object({
+      skill_name: z.string().catch(''),
+      proficiency_level: z.string().catch('')
+    })
+  )
+  .catch({ skill_name: '', proficiency_level: '' });
+
+const toolItem = z
+  .preprocess(
+    (v) => (typeof v === 'string' ? { tool_name: v } : v),
+    z.object({
+      tool_name: z.string().catch(''),
+      proficiency_level: z.string().catch('')
+    })
+  )
+  .catch({ tool_name: '', proficiency_level: '' });
+
+const languageItem = z
+  .preprocess(
+    (v) => (typeof v === 'string' ? { lang_name: v } : v),
+    z.object({
+      lang_name: z.string().catch(''),
+      proficiency_level: z.string().catch('')
+    })
+  )
+  .catch({ lang_name: '', proficiency_level: '' });
+
+// Validates the model's JSON. Every field .catch()es to a safe default, so a
+// non-array (or otherwise malformed) field becomes [] / {} instead of crashing.
+const aiResumeSchema = z.object({
+  personal_details: z
+    .object({
+      resume_job_title: z.string().catch(''),
+      summary: z.string().catch('')
+    })
+    .partial()
+    .catch({}),
+  jobs: z.array(z.any()).catch([]),
+  educations: z.array(z.any()).catch([]),
+  skills: z.array(skillItem).catch([]),
+  tools: z.array(toolItem).catch([]),
+  languages: z.array(languageItem).catch([])
+});
 
 export async function generateResumeContent(
   input: {
@@ -42,10 +66,6 @@ export async function generateResumeContent(
   },
   profile: ProfileWithRelations
 ): Promise<TResumeEditFormValues> {
-  const schemaStructure = getSchemaStructure(resumeEditFormSchema);
-
-  console.log('schema strucutre', schemaStructure);
-
   const prompt = `
     Generate a professional resume based on the following information (dont mention the company name this is a job description where we wanted to apply so make it ats friendly by using above or following information):
 
@@ -95,29 +115,52 @@ export async function generateResumeContent(
         : 'No education recorded'
     }
 
-    Instructions:
-    1. Create a compelling professional summary (3-5 sentences) that:
-       - Highlights the candidate's years of experience
-       - Emphasizes relevant skills for the target position
-       - Showcases key achievements from work history
-       - Aligns with the job description requirements
-    2. Extract key skills and tools from both the job description and work history
-    3. Format all dates as YYYY-MM-DD
-    4. Structure the response as a JSON object matching exactly this schema:
-    ${schemaStructure}
+    ${ATS_WRITING_GUIDELINES}
 
-    The professional summary should be included in personal_details.summary and must be at least 3 characters long.
-    Focus on making the summary impactful and relevant to the target position.
+    Instructions:
+    1. Write a compelling professional summary (3-5 sentences) in
+       personal_details.summary that highlights years of experience, emphasizes the
+       skills most relevant to the target position, showcases key achievements from
+       the work history, and aligns with the job description. Set
+       personal_details.resume_job_title to the target job title.
+    2. Populate ALL of the sections below from the job description and the work
+       history — never leave them empty:
+       - skills: 8-14 of the most relevant hard and soft skills for the target role.
+         Use the job description's exact terminology where it matches.
+       - tools: 5-10 concrete tools, technologies, frameworks, or platforms relevant
+         to the role.
+       - languages: spoken/human languages the candidate likely knows (e.g. English).
+         If none can be reasonably inferred, use an empty array — never invent.
+    3. Do NOT return work experience or education — those come from the candidate
+       profile, not from you.
+    4. Return ONLY a JSON object with EXACTLY these field names and this shape:
+    {
+      "personal_details": {
+        "resume_job_title": "string",
+        "summary": "string"
+      },
+      "skills": [
+        { "skill_name": "string", "proficiency_level": "Beginner | Intermediate | Advanced | Expert" }
+      ],
+      "tools": [
+        { "tool_name": "string", "proficiency_level": "Beginner | Intermediate | Advanced | Expert" }
+      ],
+      "languages": [
+        { "lang_name": "string", "proficiency_level": "Basic | Conversational | Fluent | Native" }
+      ]
+    }
   `;
 
   try {
-    const result = await AIChatSession.sendMessage(prompt);
-    const responseText = await result.response.text();
-    console.log('AI Response:', responseText);
+    const responseText = await generateJsonContent(prompt);
 
-    const content = JSON.parse(responseText) as TResumeEditFormValues;
+    // Validate + normalize the model's JSON with zod so a malformed field
+    // (e.g. a non-array skills value) can never crash the DB insert.
+    const parsedResult = aiResumeSchema.safeParse(JSON.parse(responseText));
+    const content = parsedResult.success
+      ? parsedResult.data
+      : aiResumeSchema.parse({});
 
-    // Validate and ensure all required sections exist
     return {
       personal_details: {
         resume_job_title:
@@ -128,13 +171,16 @@ export async function generateResumeContent(
         phone: profile.contactno,
         country: profile.country,
         city: profile.city,
+        linkedin: profile.linkedin ?? '',
+        github: profile.github ?? '',
+        website: profile.website ?? '',
         summary: content.personal_details?.summary || ''
       },
-      jobs: content.jobs || [],
-      educations: content.educations || [],
-      skills: content.skills || [],
-      tools: content.tools || [],
-      languages: content.languages || []
+      jobs: content.jobs,
+      educations: content.educations,
+      skills: content.skills,
+      tools: content.tools,
+      languages: content.languages
     };
   } catch (error) {
     console.error('Error generating resume content:', error);

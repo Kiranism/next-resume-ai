@@ -1,5 +1,4 @@
 import { accounts } from './accounts';
-import { posts } from './posts';
 import { users } from './users';
 import {
   profiles,
@@ -10,16 +9,17 @@ import {
   educationsRelations
 } from './profiles';
 import { resumes } from './resumes';
+import { resumeChatMessages } from './resume-chat-messages';
 
 export {
   // Tables
   accounts,
-  posts,
   users,
   profiles,
   jobs,
   educations,
   resumes,
+  resumeChatMessages,
 
   // Relations
   profilesRelations,

@@ -65,6 +65,12 @@ export const educationSchema = z.object({
   city: z.string().min(1, { message: 'Please select a city' })
 });
 
+export const projectSchema = z.object({
+  name: z.string().min(1, { message: 'Please enter a project name' }),
+  description: z.string().optional(),
+  link: z.string().optional()
+});
+
 export const resumeEditFormSchema = z.object({
   resume_id: z.string().optional(),
   personal_details: z
@@ -92,15 +98,32 @@ export const resumeEditFormSchema = z.object({
         .string()
         .min(3, { message: 'Please enter a summary' })
         .optional()
-        .nullable()
+        .nullable(),
+      linkedin: z.string().optional().nullable(),
+      github: z.string().optional().nullable(),
+      website: z.string().optional().nullable()
     })
     .optional(),
   jobs: z.array(jobSchema).optional(),
   educations: z.array(educationSchema).optional(),
+  projects: z.array(projectSchema).optional(),
   skills: z.array(proficiencyLevelSchema).optional(),
   tools: z.array(toolSchema).optional(),
-  languages: z.array(languageSchema).optional()
+  languages: z.array(languageSchema).optional(),
+  // Section keys hidden from the rendered resume (e.g. ['projects','languages']).
+  hiddenSections: z.array(z.string()).optional()
 });
+
+// Toggleable resume sections (keys used in `hiddenSections`).
+export const RESUME_SECTIONS = [
+  { key: 'summary', label: 'Summary' },
+  { key: 'experience', label: 'Experience' },
+  { key: 'education', label: 'Education' },
+  { key: 'projects', label: 'Projects' },
+  { key: 'skills', label: 'Skills' },
+  { key: 'tools', label: 'Tools' },
+  { key: 'languages', label: 'Languages' }
+] as const;
 
 export type TResumeEditFormValues = z.infer<typeof resumeEditFormSchema>;
 export type TResumeFormValues = {

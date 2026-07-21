@@ -7,9 +7,13 @@ import { useState } from 'react';
 import { ResumeCreateForm } from '@/features/resume/components/resume-create-form';
 import PageContainer from '@/components/layout/page-container';
 
-export default function CreateResumeContent() {
+export default function CreateResumeContent({
+  initialProfileId
+}: {
+  initialProfileId?: string;
+}) {
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(
-    null
+    initialProfileId ?? null
   );
 
   const { steps, currentStepIndex, step, isFirstStep, isLastStep, back, next } =
@@ -23,6 +27,22 @@ export default function CreateResumeContent() {
       />,
       <ResumeCreateForm key='resume-form' profileId={selectedProfileId} />
     ]);
+
+  if (initialProfileId) {
+    return (
+      <PageContainer scrollable>
+        <div className='flex flex-1 flex-col space-y-4'>
+          <div className='mb-8'>
+            <h1 className='mb-2 text-3xl font-bold'>Re-tailor Resume</h1>
+            <p className='text-muted-foreground'>
+              Enter a new job description to tailor this profile.
+            </p>
+          </div>
+          <ResumeCreateForm profileId={initialProfileId} />
+        </div>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer scrollable>
