@@ -1,7 +1,7 @@
 'use client';
 
 import { pdf } from '@react-pdf/renderer';
-import { useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -17,17 +17,71 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).toString();
 
+const PAGE_WIDTH = 640;
+const PAGE_HEIGHT = Math.round(PAGE_WIDTH * (297 / 210)); // A4 aspect ratio
+
 type TPdfRendererProps = {
   formData: TResumeEditFormValues;
   templateId: string;
 };
 
+type PdfBufferProps = {
+  url: string | null;
+  pageNumber: number;
+  onLoadSuccess?: (d: { numPages: number }) => void;
+  onRenderSuccess?: () => void;
+};
+
+// One persistent PDF buffer. Memoised so pdf.js only re-rasters when its `url` or
+// `pageNumber` actually change — not on every parent keystroke re-render. Text and
+// annotation layers are off: a preview needs neither, and skipping them removes a
+// class of flicker and speeds rendering. The downloaded blob is unaffected.
+const PdfBuffer = memo(function PdfBuffer({
+  url,
+  pageNumber,
+  onLoadSuccess,
+  onRenderSuccess
+}: PdfBufferProps) {
+  if (!url) return null;
+  return (
+    <Document
+      file={url}
+      loading={null}
+      noData={null}
+      error={null}
+      onLoadSuccess={onLoadSuccess}
+    >
+      <Page
+        pageNumber={pageNumber}
+        width={PAGE_WIDTH}
+        loading={null}
+        noData={null}
+        error={null}
+        renderTextLayer={false}
+        renderAnnotationLayer={false}
+        onRenderSuccess={onRenderSuccess}
+      />
+    </Document>
+  );
+});
+
+type Slot = 'a' | 'b';
+
 const PdfRenderer = ({ formData, templateId }: TPdfRendererProps) => {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [previousRenderValue, setPreviousRenderValue] = useState<string | null>(
-    null
-  );
+
+  // Ping-pong double buffer: two persistent slots. A new PDF is loaded into the
+  // HIDDEN slot; the visible slot keeps its painted canvas, so nothing ever blanks.
+  // When the hidden slot finishes rendering we crossfade to it. No <Document> is
+  // ever remounted mid-edit.
+  const [urls, setUrls] = useState<{ a: string | null; b: string | null }>({
+    a: null,
+    b: null
+  });
+  const [front, setFront] = useState<Slot>('a');
+  const pendingRef = useRef<Slot | null>(null);
+  const [hasRendered, setHasRendered] = useState(false);
 
   const template = getTemplate(templateId);
   const Template = template?.component;
@@ -42,78 +96,93 @@ const PdfRenderer = ({ formData, templateId }: TPdfRendererProps) => {
     return URL.createObjectURL(blob);
   }, [debouncedSerialized, templateId]);
 
-  const activeUrls = useRef<Set<string>>(new Set());
+  // Route each freshly-produced blob URL into the hidden (back) slot.
+  const loadedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (render.value) activeUrls.current.add(render.value);
-    for (const url of Array.from(activeUrls.current)) {
-      if (url !== render.value && url !== previousRenderValue) {
-        URL.revokeObjectURL(url);
-        activeUrls.current.delete(url);
+    const url = render.value;
+    if (!url || url === loadedRef.current) return;
+    loadedRef.current = url;
+    const back: Slot = front === 'a' ? 'b' : 'a';
+    pendingRef.current = back;
+    setUrls((prev) => {
+      const replaced = prev[back];
+      const next = { ...prev, [back]: url };
+      if (replaced && replaced !== next[front]) {
+        URL.revokeObjectURL(replaced);
       }
-    }
-  }, [render.value, previousRenderValue]);
+      return next;
+    });
+  }, [render.value, front]);
+
   useEffect(() => {
-    const urls = activeUrls.current;
+    const snapshot = urls;
     return () => {
-      for (const url of urls) URL.revokeObjectURL(url);
-      urls.clear();
+      [snapshot.a, snapshot.b].forEach((u) => u && URL.revokeObjectURL(u));
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const onDocumentLoad = (d: { numPages: number }) => {
+  const promote = useCallback((slot: Slot) => {
+    if (pendingRef.current === slot) {
+      pendingRef.current = null;
+      setHasRendered(true);
+      setFront(slot);
+    }
+  }, []);
+
+  const onRenderA = useCallback(() => promote('a'), [promote]);
+  const onRenderB = useCallback(() => promote('b'), [promote]);
+
+  const onLoad = useCallback((d: { numPages: number }) => {
     setNumPages(d.numPages);
-    setCurrentPage((prev) => Math.min(prev, d.numPages));
-  };
-
-  const isFirstRendering = !previousRenderValue;
-  const isLatestValueRendered = previousRenderValue === render.value;
-  const isBusy = render.loading || !isLatestValueRendered;
-
-  const shouldShowTextLoader = isFirstRendering && isBusy;
-  const shouldShowPreviousDocument = !isFirstRendering && isBusy;
+    setCurrentPage((p) => Math.min(p, d.numPages));
+  }, []);
 
   const goToPage = (page: number) => {
     if (!numPages) return;
     setCurrentPage(Math.min(Math.max(1, page), numPages));
   };
 
-  return (
-    <div className='relative flex h-full flex-1 flex-col'>
-      {shouldShowPreviousDocument && previousRenderValue ? (
-        <Document
-          key={previousRenderValue}
-          file={previousRenderValue}
-          loading={null}
-        >
-          <Page key={currentPage} pageNumber={currentPage} />
-        </Document>
-      ) : null}
+  const showLoader = !hasRendered;
 
-      <div id='resume-pdf-preview'>
-        <Document
-          key={render.value}
-          className={
-            shouldShowPreviousDocument ? 'absolute inset-0' : undefined
-          }
-          file={render.value}
-          loading={null}
-          onLoadSuccess={onDocumentLoad}
+  return (
+    <div className='relative flex flex-col items-center'>
+      <div
+        id='resume-pdf-preview'
+        className='relative overflow-hidden bg-white shadow'
+        style={{ width: PAGE_WIDTH, minHeight: PAGE_HEIGHT }}
+      >
+        <div
+          className='absolute inset-0 transition-opacity duration-150'
+          style={{ opacity: front === 'a' ? 1 : 0 }}
         >
-          <Page
-            key={currentPage}
+          <PdfBuffer
+            url={urls.a}
             pageNumber={currentPage}
-            onRenderSuccess={() => setPreviousRenderValue(render.value ?? null)}
+            onLoadSuccess={onLoad}
+            onRenderSuccess={onRenderA}
           />
-        </Document>
+        </div>
+        <div
+          className='absolute inset-0 transition-opacity duration-150'
+          style={{ opacity: front === 'b' ? 1 : 0 }}
+        >
+          <PdfBuffer
+            url={urls.b}
+            pageNumber={currentPage}
+            onLoadSuccess={onLoad}
+            onRenderSuccess={onRenderB}
+          />
+        </div>
+
+        {showLoader && (
+          <div className='absolute inset-0 flex items-center justify-center text-sm text-muted-foreground'>
+            Rendering preview…
+          </div>
+        )}
       </div>
 
-      {shouldShowTextLoader && (
-        <p className='py-8 text-center text-sm text-muted-foreground'>
-          Rendering preview…
-        </p>
-      )}
-
-      <div className='my-4'>
+      <div className='my-4' style={{ width: PAGE_WIDTH }}>
         {numPages && numPages > 0 && (
           <div className='flex items-center justify-between gap-2'>
             <div className='flex flex-wrap items-center gap-1'>
@@ -147,10 +216,10 @@ const PdfRenderer = ({ formData, templateId }: TPdfRendererProps) => {
               </Button>
             </div>
 
-            {render.value && (
+            {urls[front] && (
               <Button asChild>
                 <a
-                  href={render.value}
+                  href={urls[front] ?? undefined}
                   download={`next-resume-${Date.now()}.pdf`}
                   className='text-primary'
                 >
