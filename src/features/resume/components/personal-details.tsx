@@ -19,7 +19,7 @@ interface PersonalDetailsProps {
 export function PersonalDetails({ control }: PersonalDetailsProps) {
   const summary = useSectionVisibility('summary');
   return (
-    <div className='space-y-6'>
+    <div className='flex flex-col gap-6'>
       <h2 className='text-2xl font-semibold'>Personal Details</h2>
 
       <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>

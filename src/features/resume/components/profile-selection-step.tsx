@@ -18,13 +18,13 @@ export function ProfileSelectionStep({
   }
 
   return (
-    <div className='space-y-4'>
+    <div className='flex flex-col gap-4'>
       <h2 className='text-xl font-semibold'>Select a Profile</h2>
       <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
         {profiles?.map((profile) => (
           <Card
             key={profile.id}
-            className='cursor-pointer transition-all hover:border-primary'
+            className='hover:border-primary cursor-pointer transition-all'
             onClick={() => onProfileSelect(profile.id)}
           >
             <CardHeader>
@@ -33,7 +33,7 @@ export function ProfileSelectionStep({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className='space-y-2'>
+              <div className='flex flex-col gap-2'>
                 <div className='text-sm'>
                   <span className='font-medium'>Email:</span> {profile.email}
                 </div>
