@@ -91,6 +91,20 @@ export const profileRouter = j.router({
     return c.json(userProfiles);
   }),
 
+  getProfile: privateProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ c, ctx, input }) => {
+      const { user } = ctx;
+
+      const profile = (await db.query.profiles.findFirst({
+        where: and(eq(profiles.id, input.id), eq(profiles.userId, user.id)),
+        with: { jobs: true, educations: true }
+      })) as ProfileWithRelations | undefined;
+
+      // Returns null when not found or not owned by the caller (no IDOR).
+      return c.json(profile ?? null);
+    }),
+
   createProfile: privateProcedure
     .input(profileSchema)
     .mutation(async ({ c, ctx, input }) => {

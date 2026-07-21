@@ -15,6 +15,17 @@ export const useProfiles = () => {
   });
 };
 
+export const useProfile = (id: string) => {
+  return useQuery({
+    queryKey: ['profile', id],
+    queryFn: async () => {
+      const response = await client.profile.getProfile.$get({ id });
+      return await response.json();
+    },
+    enabled: !!id
+  });
+};
+
 export const useCreateProfile = () => {
   const queryClient = useQueryClient();
   return useMutation({

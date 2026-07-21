@@ -18,12 +18,12 @@ import { ArrowLeft, ArrowRight, Check, PlusCircle, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { SubmitHandler, useFieldArray, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 import { useCreateProfile, useUpdateProfile } from '../api';
 import { profileSchema, TProfileFormValues } from '../utils/form-schema';
 
 interface CreateProfileFormProps {
   profile?: ProfileWithRelations;
-  closeModal: () => void;
 }
 
 const transformProfileToFormValues = (
@@ -72,14 +72,12 @@ const transformProfileToFormValues = (
   };
 };
 
-export default function CreateProfileForm({
-  profile,
-  closeModal
-}: CreateProfileFormProps) {
+export default function CreateProfileForm({ profile }: CreateProfileFormProps) {
   const { mutateAsync: createProfile, isPending: isCreating } =
     useCreateProfile();
   const { mutateAsync: updateProfile, isPending: isUpdating } =
     useUpdateProfile();
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [isReviewStep, setIsReviewStep] = useState(false);
 
@@ -115,7 +113,8 @@ export default function CreateProfileForm({
         await createProfile(data);
         toast.success('Profile created successfully');
       }
-      closeModal();
+      router.push('/dashboard/profile');
+      router.refresh();
     } catch (error) {
       console.error('Profile submission error:', error);
       toast.error('Failed to submit profile. Please try again.');

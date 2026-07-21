@@ -9,36 +9,14 @@ import {
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProfileWithRelations } from '@/server/routers/profile-router';
-import { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useProfiles } from '../api';
-import CreateProfileModal from './create-profile-modal';
 import { ProfileDeleteButton } from './profile-delete-button';
 import { ImportProfileDialog } from './import-profile-dialog';
 import { PlusCircle } from 'lucide-react';
 
 export default function ProfileList() {
-  const [selectedProfile, setSelectedProfile] =
-    useState<ProfileWithRelations | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
-
-  const handleModalChange = useCallback((open: boolean) => {
-    setIsOpen(open);
-    if (!open) {
-      setSelectedProfile(null);
-    }
-  }, []);
-
-  const handleCreateClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedProfile(null);
-    setIsOpen(true);
-  }, []);
-
-  const handleProfileClick = useCallback((profile: ProfileWithRelations) => {
-    setSelectedProfile(profile);
-    setIsOpen(true);
-  }, []);
-
+  const router = useRouter();
   const { data: profiles, isLoading } = useProfiles();
 
   if (isLoading) {
@@ -47,18 +25,12 @@ export default function ProfileList() {
 
   return (
     <>
-      <CreateProfileModal
-        onChange={handleModalChange}
-        isOpen={isOpen}
-        profile={selectedProfile as ProfileWithRelations}
-      />
-
       <div className='mb-4 flex justify-end'>
         <ImportProfileDialog />
       </div>
       <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
         <Card
-          onClick={handleCreateClick}
+          onClick={() => router.push('/dashboard/profile/create')}
           className='flex cursor-pointer flex-col items-center justify-center border-2 border-dashed bg-gradient-to-br from-sidebar/60 to-sidebar p-8 hover:border-primary'
         >
           <div className='flex h-full flex-col items-center justify-center'>
@@ -73,9 +45,7 @@ export default function ProfileList() {
           <Card
             key={profile.id}
             className='cursor-pointer bg-gradient-to-br from-sidebar/60 to-sidebar transition-all hover:border-primary'
-            onClick={() =>
-              handleProfileClick(profile as unknown as ProfileWithRelations)
-            }
+            onClick={() => router.push(`/dashboard/profile/edit/${profile.id}`)}
           >
             <CardHeader>
               <div className='flex items-start justify-between'>
@@ -85,7 +55,9 @@ export default function ProfileList() {
                   </CardTitle>
                   <CardDescription>{profile.email}</CardDescription>
                 </div>
-                <ProfileDeleteButton profileId={profile.id} />
+                <div onClick={(e) => e.stopPropagation()}>
+                  <ProfileDeleteButton profileId={profile.id} />
+                </div>
               </div>
             </CardHeader>
             <CardContent>
