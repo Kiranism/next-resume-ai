@@ -3,47 +3,66 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Map the shadcn design tokens (defined as HSL channels in :root / .dark below)
-   into Tailwind v4 theme colors so utilities like `bg-background`, `text-primary`,
-   `border-input`, `bg-sidebar-accent`, opacity modifiers (`/50`), etc. all resolve. */
+/* Cyberpunk theme: oklch tokens mapped straight through (no hsl() wrapper).
+   Accordion animations + radius scale preserved from the project. */
 @theme inline {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-  --color-chart-1: hsl(var(--chart-1));
-  --color-chart-2: hsl(var(--chart-2));
-  --color-chart-3: hsl(var(--chart-3));
-  --color-chart-4: hsl(var(--chart-4));
-  --color-chart-5: hsl(var(--chart-5));
-  --color-sidebar: hsl(var(--sidebar-background));
-  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
-  --color-sidebar-primary: hsl(var(--sidebar-primary));
-  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
-  --color-sidebar-accent: hsl(var(--sidebar-accent));
-  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
-  --color-sidebar-border: hsl(var(--sidebar-border));
-  --color-sidebar-ring: hsl(var(--sidebar-ring));
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+
+  --tracking-tighter: calc(var(--tracking-normal) - 0.05em);
+  --tracking-tight: calc(var(--tracking-normal) - 0.025em);
+  --tracking-normal: var(--tracking-normal);
+  --tracking-wide: calc(var(--tracking-normal) + 0.025em);
+  --tracking-wider: calc(var(--tracking-normal) + 0.05em);
+  --tracking-widest: calc(var(--tracking-normal) + 0.1em);
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
@@ -75,74 +94,121 @@
 }
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
-  --primary: 161.4 93.5% 30.4%;
-  --primary-foreground: 151.8 81% 95.9%;
-  --secondary: 240 4.8% 95.9%;
-  --secondary-foreground: 240 5.9% 10%;
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
-  --accent: 240 4.8% 95.9%;
-  --accent-foreground: 240 5.9% 10%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 240 5.9% 90%;
-  --input: 240 4.9% 83.9%;
-  --ring: 240 5% 64.9%;
-  --chart-1: 12 76% 61%;
-  --chart-2: 173 58% 39%;
-  --chart-3: 197 37% 24%;
-  --chart-4: 43 74% 66%;
-  --chart-5: 27 87% 67%;
-  --radius: 0.5rem;
-  --sidebar-background: 0 0% 98%;
-  --sidebar-foreground: 240 5.3% 26.1%;
-  --sidebar-primary: 240 5.9% 10%;
-  --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 240 4.8% 95.9%;
-  --sidebar-accent-foreground: 240 5.9% 10%;
-  --sidebar-border: 220 13% 91%;
-  --sidebar-ring: 217.2 91.2% 59.8%;
+  --background: oklch(0.25 0.0112 254.0422);
+  --foreground: oklch(0.8717 0.0093 258.3382);
+  --card: oklch(0.2212 0.0108 260.6784);
+  --card-foreground: oklch(0.8717 0.0093 258.3382);
+  --popover: oklch(0.2212 0.0108 260.6784);
+  --popover-foreground: oklch(0.8717 0.0093 258.3382);
+  --primary: oklch(0.5412 0.2127 24.7912);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.4244 0.1809 265.6377);
+  --secondary-foreground: oklch(1 0 0);
+  --muted: oklch(0.3186 0.0165 255.6397);
+  --muted-foreground: oklch(0.7137 0.0192 261.3246);
+  --accent: oklch(0.6658 0.1574 58.3183);
+  --accent-foreground: oklch(0.2212 0.0108 260.6784);
+  --destructive: oklch(0.4437 0.1613 26.8994);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.3729 0.0306 259.7328);
+  --input: oklch(0.2212 0.0108 260.6784);
+  --ring: oklch(0.5412 0.2127 24.7912);
+  --chart-1: oklch(0.5412 0.2127 24.7912);
+  --chart-2: oklch(0.4244 0.1809 265.6377);
+  --chart-3: oklch(0.6658 0.1574 58.3183);
+  --chart-4: oklch(0.4461 0.0263 256.8018);
+  --chart-5: oklch(0.4907 0.2412 292.5809);
+  --sidebar: oklch(0.2212 0.0108 260.6784);
+  --sidebar-foreground: oklch(0.8717 0.0093 258.3382);
+  --sidebar-primary: oklch(0.5412 0.2127 24.7912);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.3186 0.0165 255.6397);
+  --sidebar-accent-foreground: oklch(0.6658 0.1574 58.3183);
+  --sidebar-border: oklch(0.3729 0.0306 259.7328);
+  --sidebar-ring: oklch(0.5412 0.2127 24.7912);
+  --font-sans: 'Orbitron', sans-serif;
+  --font-serif: 'Georgia', serif;
+  --font-mono: 'Share Tech Mono', monospace;
+  --radius: 0rem;
+  --shadow-x: 2px;
+  --shadow-y: 2px;
+  --shadow-blur: 12px;
+  --shadow-spread: 2px;
+  --shadow-opacity: 0.5;
+  --shadow-color: #000000;
+  --shadow-2xs: 2px 2px 12px 2px hsl(0 0% 0% / 0.25);
+  --shadow-xs: 2px 2px 12px 2px hsl(0 0% 0% / 0.25);
+  --shadow-sm: 2px 2px 12px 2px hsl(0 0% 0% / 0.5),
+    2px 1px 2px 1px hsl(0 0% 0% / 0.5);
+  --shadow: 2px 2px 12px 2px hsl(0 0% 0% / 0.5),
+    2px 1px 2px 1px hsl(0 0% 0% / 0.5);
+  --shadow-md: 2px 2px 12px 2px hsl(0 0% 0% / 0.5),
+    2px 2px 4px 1px hsl(0 0% 0% / 0.5);
+  --shadow-lg: 2px 2px 12px 2px hsl(0 0% 0% / 0.5),
+    2px 4px 6px 1px hsl(0 0% 0% / 0.5);
+  --shadow-xl: 2px 2px 12px 2px hsl(0 0% 0% / 0.5),
+    2px 8px 10px 1px hsl(0 0% 0% / 0.5);
+  --shadow-2xl: 2px 2px 12px 2px hsl(0 0% 0% / 1.25);
+  --tracking-normal: 0.1em;
+  --spacing: 0.25rem;
 }
 
 .dark {
-  --background: 240 5.9% 10%;
-  --foreground: 0 0% 98%;
-  --card: 240 5.9% 10%;
-  --card-foreground: 0 0% 98%;
-  --popover: 240 5.9% 10%;
-  --popover-foreground: 0 0% 98%;
-  --primary: 161.4 93.5% 30.4%;
-  --primary-foreground: 151.8 81% 95.9%;
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  --accent: 240 4.5% 13.1%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 240 5.5% 17.8%;
-  --input: 240 5.5% 17.8%;
-  --ring: 240 3.8% 46.1%;
-  --chart-1: 220 70% 50%;
-  --chart-2: 160 60% 45%;
-  --chart-3: 30 80% 55%;
-  --chart-4: 280 65% 60%;
-  --chart-5: 340 75% 55%;
-  --sidebar-background: 240 4.5% 13.1%;
-  --sidebar-foreground: 240 4.8% 95.9%;
-  --sidebar-primary: 161.4 93.5% 30.4%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 3.7% 15.9%;
-  --sidebar-accent-foreground: 240 4.8% 95.9%;
-  --sidebar-border: 240 3.7% 15.9%;
-  --sidebar-ring: 217.2 91.2% 59.8%;
+  --background: oklch(0.1773 0.0089 264.3183);
+  --foreground: oklch(0.9276 0.0058 264.5313);
+  --card: oklch(0.2086 0.0128 264.2461);
+  --card-foreground: oklch(0.9276 0.0058 264.5313);
+  --popover: oklch(0.2086 0.0128 264.2461);
+  --popover-foreground: oklch(0.9276 0.0058 264.5313);
+  --primary: oklch(0.5771 0.2152 27.325);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.5461 0.2152 262.8809);
+  --secondary-foreground: oklch(1 0 0);
+  --muted: oklch(0.2875 0.0163 259.7887);
+  --muted-foreground: oklch(0.7137 0.0192 261.3246);
+  --accent: oklch(0.7686 0.1647 70.0804);
+  --accent-foreground: oklch(0.1773 0.0089 264.3183);
+  --destructive: oklch(0.5054 0.1905 27.5181);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.323 0.0219 259.3809);
+  --input: oklch(0.1773 0.0089 264.3183);
+  --ring: oklch(0.5771 0.2152 27.325);
+  --chart-1: oklch(0.5771 0.2152 27.325);
+  --chart-2: oklch(0.5461 0.2152 262.8809);
+  --chart-3: oklch(0.7686 0.1647 70.0804);
+  --chart-4: oklch(0.3729 0.0306 259.7328);
+  --chart-5: oklch(0.5413 0.2466 293.009);
+  --sidebar: oklch(0.2086 0.0128 264.2461);
+  --sidebar-foreground: oklch(0.9276 0.0058 264.5313);
+  --sidebar-primary: oklch(0.5771 0.2152 27.325);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.1773 0.0089 264.3183);
+  --sidebar-accent-foreground: oklch(0.7686 0.1647 70.0804);
+  --sidebar-border: oklch(0.323 0.0219 259.3809);
+  --sidebar-ring: oklch(0.5771 0.2152 27.325);
+  --font-sans: 'Orbitron', sans-serif;
+  --font-serif: 'Georgia', serif;
+  --font-mono: 'Share Tech Mono', monospace;
+  --radius: 0rem;
+  --shadow-x: 4px;
+  --shadow-y: 4px;
+  --shadow-blur: 20px;
+  --shadow-spread: 4px;
+  --shadow-opacity: 0.8;
+  --shadow-color: #000000;
+  --shadow-2xs: 4px 4px 20px 4px hsl(0 0% 0% / 0.4);
+  --shadow-xs: 4px 4px 20px 4px hsl(0 0% 0% / 0.4);
+  --shadow-sm: 4px 4px 20px 4px hsl(0 0% 0% / 0.8),
+    4px 1px 2px 3px hsl(0 0% 0% / 0.8);
+  --shadow: 4px 4px 20px 4px hsl(0 0% 0% / 0.8),
+    4px 1px 2px 3px hsl(0 0% 0% / 0.8);
+  --shadow-md: 4px 4px 20px 4px hsl(0 0% 0% / 0.8),
+    4px 2px 4px 3px hsl(0 0% 0% / 0.8);
+  --shadow-lg: 4px 4px 20px 4px hsl(0 0% 0% / 0.8),
+    4px 4px 6px 3px hsl(0 0% 0% / 0.8);
+  --shadow-xl: 4px 4px 20px 4px hsl(0 0% 0% / 0.8),
+    4px 8px 10px 3px hsl(0 0% 0% / 0.8);
+  --shadow-2xl: 4px 4px 20px 4px hsl(0 0% 0% / 2);
 }
 
 @layer base {
@@ -151,6 +217,8 @@
   }
   body {
     @apply bg-background text-foreground box-border;
+    font-family: var(--font-sans);
+    letter-spacing: var(--tracking-normal);
   }
 }
 
@@ -184,19 +252,18 @@
   height: 100dvh;
 }
 
-/* Text shimmer for live status ("Thinking…", "Generating…"). The design tokens
-   here are bare HSL channels, so they MUST be wrapped in hsl() to be valid
-   gradient colors — using var(--foreground) raw yields an invalid (invisible)
-   gradient. A bright foreground band sweeps across muted-foreground text. */
+/* Text shimmer for live status ("Thinking…", "Generating…"). Tokens are now full
+   oklch colors, so they are used directly (no hsl() wrapper). A bright foreground
+   band sweeps across muted-foreground text. */
 @utility shimmer {
   color: transparent;
   background-image: linear-gradient(
     90deg,
-    hsl(var(--muted-foreground)) 0%,
-    hsl(var(--muted-foreground)) 35%,
-    hsl(var(--foreground)) 50%,
-    hsl(var(--muted-foreground)) 65%,
-    hsl(var(--muted-foreground)) 100%
+    var(--muted-foreground) 0%,
+    var(--muted-foreground) 35%,
+    var(--foreground) 50%,
+    var(--muted-foreground) 65%,
+    var(--muted-foreground) 100%
   );
   background-size: 200% 100%;
   background-repeat: no-repeat;

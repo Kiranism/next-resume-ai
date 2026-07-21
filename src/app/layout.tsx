@@ -2,7 +2,7 @@ import Providers from '@/components/layout/providers';
 import { Toaster } from '@/components/ui/sonner';
 import type { Metadata } from 'next';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
-import { Lato } from 'next/font/google';
+import { Orbitron, Share_Tech_Mono } from 'next/font/google';
 import NextTopLoader from 'nextjs-toploader';
 import './globals.css';
 import { ClerkProvider } from '@clerk/nextjs';
@@ -81,9 +81,18 @@ export const metadata: Metadata = {
   ]
 };
 
-const lato = Lato({
+// Cyberpunk theme fonts. Orbitron -> --font-sans, Share Tech Mono -> --font-mono.
+// Georgia (--font-serif) is a system font, set in globals.css (not on Google Fonts).
+const fontSans = Orbitron({
   subsets: ['latin'],
-  weight: ['400', '700', '900'],
+  variable: '--font-sans',
+  display: 'swap'
+});
+
+const fontMono = Share_Tech_Mono({
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-mono',
   display: 'swap'
 });
 
@@ -93,7 +102,11 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang='en' className={`${lato.className}`} suppressHydrationWarning>
+    <html
+      lang='en'
+      className={`${fontSans.variable} ${fontMono.variable}`}
+      suppressHydrationWarning
+    >
       <body className={'overflow-hidden'}>
         <NextTopLoader showSpinner={false} />
         <ClerkProvider
