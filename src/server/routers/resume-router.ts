@@ -4,10 +4,7 @@ import { db } from '../db';
 import { resumes, profiles, accounts } from '../db/schema';
 import { eq, desc, inArray, and, count } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
-import {
-  resumeFormSchema,
-  resumeEditFormSchema
-} from '@/features/resume/utils/form-schema';
+import { resumeFormSchema } from '@/features/resume/utils/form-schema';
 import { generateResumeContent } from '../services/ai-resume';
 import { uploadImageToStorage } from '../services/upload';
 
@@ -81,9 +78,11 @@ export const resumeRouter = j.router({
         personalDetails: aiGeneratedContent.personal_details,
         jobs: profile.jobs,
         education: profile.educations,
+        projects: [],
         skills: aiGeneratedContent.skills,
         tools: aiGeneratedContent.tools,
         languages: aiGeneratedContent.languages,
+        hiddenSections: [],
         updatedAt: new Date()
       };
       const [created] = await db.insert(resumes).values(newResume).returning();
@@ -119,20 +118,44 @@ export const resumeRouter = j.router({
     }),
   // Update a resume (owner only)
   updateResume: privateProcedure
+    // Lenient input: the resume is stored as jsonb, so persistence must NOT be
+    // blocked by the strict form schema. A normal resume (e.g. a current job
+    // with an empty endDate, or a blank city) is "invalid" per the strict
+    // schema but is completely valid to save — gating on it silently dropped
+    // every save. The strict schema stays for FORM UX (field hints) only.
     .input(
       z.object({
         id: z.string(),
-        ...resumeEditFormSchema.shape
+        resume_id: z.string().optional(),
+        personal_details: z.record(z.string(), z.any()).nullish(),
+        jobs: z.array(z.any()).optional(),
+        educations: z.array(z.any()).optional(),
+        projects: z.array(z.any()).optional(),
+        skills: z.array(z.any()).optional(),
+        tools: z.array(z.any()).optional(),
+        languages: z.array(z.any()).optional(),
+        hiddenSections: z.array(z.string()).optional()
       })
     )
     .mutation(async ({ c, ctx, input }) => {
       const { user } = ctx;
       const { id, ...updateData } = input;
 
+      // Map form field names → DB column props explicitly. Spreading raw form
+      // keys silently dropped `personal_details` and `educations` (Drizzle only
+      // matches the model prop names personalDetails / education). undefined
+      // fields are omitted from the SET clause, so partial updates still work.
       const [updated] = await db
         .update(resumes)
         .set({
-          ...updateData,
+          personalDetails: updateData.personal_details,
+          jobs: updateData.jobs,
+          education: updateData.educations,
+          projects: updateData.projects,
+          skills: updateData.skills,
+          tools: updateData.tools,
+          languages: updateData.languages,
+          hiddenSections: updateData.hiddenSections,
           updatedAt: new Date()
         })
         .where(and(eq(resumes.id, id), eq(resumes.userId, user.id)))

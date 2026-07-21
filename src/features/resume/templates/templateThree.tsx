@@ -43,6 +43,8 @@ export default function ResumeTemplateThree({
   const skills = formData?.skills ?? [];
   const tools = formData?.tools ?? [];
   const languages = formData?.languages ?? [];
+  const projects = formData?.projects ?? [];
+  const hidden = formData?.hiddenSections ?? [];
 
   return (
     <Document>
@@ -84,9 +86,9 @@ export default function ResumeTemplateThree({
         {/* Main */}
         <View style={tw('flex flex-row gap-8')}>
           {/* Left column - 70% */}
-          <View style={tw('flex flex-[0.7] flex-col gap-5')}>
-            {pd?.summary ? (
-              <View>
+          <View style={tw('flex flex-[0.7] flex-col')}>
+            {!hidden.includes('summary') && pd?.summary ? (
+              <View style={tw('mb-5')}>
                 <Text style={tw('text-lg font-bold text-accent mb-2')}>
                   Professional Summary
                 </Text>
@@ -94,14 +96,14 @@ export default function ResumeTemplateThree({
               </View>
             ) : null}
 
-            {jobs.length > 0 ? (
-              <View>
+            {!hidden.includes('experience') && jobs.length > 0 ? (
+              <View style={tw('mb-5')}>
                 <Text style={tw('text-lg font-bold text-accent mb-2')}>
                   Work Experience
                 </Text>
-                <View style={tw('flex flex-col gap-3')}>
+                <View>
                   {jobs.map((job, i) => (
-                    <View key={i} wrap={false}>
+                    <View key={i} wrap={false} style={tw('mb-3')}>
                       <View
                         style={tw(
                           'flex flex-row justify-between items-baseline'
@@ -128,14 +130,47 @@ export default function ResumeTemplateThree({
               </View>
             ) : null}
 
-            {educations.length > 0 ? (
-              <View>
+            {!hidden.includes('projects') && projects.length > 0 ? (
+              <View style={tw('mb-5')}>
+                <Text style={tw('text-lg font-bold text-accent mb-2')}>
+                  Projects
+                </Text>
+                <View>
+                  {projects.map((proj, i) => (
+                    <View key={i} wrap={false} style={tw('mb-3')}>
+                      <View
+                        style={tw(
+                          'flex flex-row justify-between items-baseline'
+                        )}
+                      >
+                        <Text style={tw('text-base font-bold text-primary')}>
+                          {proj?.name ?? ''}
+                        </Text>
+                        {proj?.link ? (
+                          <Text style={tw('text-xs text-muted')}>
+                            {proj.link}
+                          </Text>
+                        ) : null}
+                      </View>
+                      {proj?.description ? (
+                        <Text style={tw('text-sm mt-1 leading-relaxed')}>
+                          {proj.description}
+                        </Text>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
+            {!hidden.includes('education') && educations.length > 0 ? (
+              <View style={tw('mb-5')}>
                 <Text style={tw('text-lg font-bold text-accent mb-2')}>
                   Education
                 </Text>
-                <View style={tw('flex flex-col gap-3')}>
+                <View>
                   {educations.map((edu, i) => (
-                    <View key={i}>
+                    <View key={i} wrap={false} style={tw('mb-3')}>
                       <View
                         style={tw(
                           'flex flex-row justify-between items-baseline'
@@ -169,9 +204,9 @@ export default function ResumeTemplateThree({
           </View>
 
           {/* Right column - 30% */}
-          <View style={tw('flex flex-[0.3] flex-col gap-5')}>
-            {skills.length > 0 ? (
-              <View>
+          <View style={tw('flex flex-[0.3] flex-col')}>
+            {!hidden.includes('skills') && skills.length > 0 ? (
+              <View style={tw('mb-5')}>
                 <Text style={tw('text-lg font-bold text-accent mb-2')}>
                   Skills
                 </Text>
@@ -180,8 +215,8 @@ export default function ResumeTemplateThree({
                 />
               </View>
             ) : null}
-            {tools.length > 0 ? (
-              <View>
+            {!hidden.includes('tools') && tools.length > 0 ? (
+              <View style={tw('mb-5')}>
                 <Text style={tw('text-lg font-bold text-accent mb-2')}>
                   Tools
                 </Text>
@@ -190,8 +225,8 @@ export default function ResumeTemplateThree({
                 />
               </View>
             ) : null}
-            {languages.length > 0 ? (
-              <View>
+            {!hidden.includes('languages') && languages.length > 0 ? (
+              <View style={tw('mb-5')}>
                 <Text style={tw('text-lg font-bold text-accent mb-2')}>
                   Languages
                 </Text>

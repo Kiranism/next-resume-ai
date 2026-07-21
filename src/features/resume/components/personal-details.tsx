@@ -8,13 +8,16 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 import { type TResumeEditFormValues } from '@/features/resume/utils/form-schema';
+import { SectionToggleButton, useSectionVisibility } from './section-shell';
 
 interface PersonalDetailsProps {
   control: Control<TResumeEditFormValues>;
 }
 
 export function PersonalDetails({ control }: PersonalDetailsProps) {
+  const summary = useSectionVisibility('summary');
   return (
     <div className='space-y-6'>
       <h2 className='text-2xl font-semibold'>Personal Details</h2>
@@ -152,10 +155,21 @@ export function PersonalDetails({ control }: PersonalDetailsProps) {
         name='personal_details.summary'
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Professional Summary</FormLabel>
+            <div className='flex items-center gap-1.5'>
+              <FormLabel>Professional Summary</FormLabel>
+              <SectionToggleButton sectionKey='summary' />
+              {summary.isHidden && (
+                <span className='text-muted-foreground text-xs'>
+                  Hidden from resume
+                </span>
+              )}
+            </div>
             <FormControl>
               <Textarea
-                className='min-h-[100px]'
+                className={cn(
+                  'min-h-[100px]',
+                  summary.isHidden && 'opacity-50'
+                )}
                 {...field}
                 value={field.value ?? ''}
               />

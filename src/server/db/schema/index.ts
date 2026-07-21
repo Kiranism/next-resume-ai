@@ -9,6 +9,7 @@ import {
   educationsRelations
 } from './profiles';
 import { resumes } from './resumes';
+import { resumeChatMessages } from './resume-chat-messages';
 
 export {
   // Tables
@@ -18,6 +19,7 @@ export {
   jobs,
   educations,
   resumes,
+  resumeChatMessages,
 
   // Relations
   profilesRelations,

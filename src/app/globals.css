@@ -183,3 +183,33 @@
   height: 100vh; /* Fallback */
   height: 100dvh;
 }
+
+/* Text shimmer for live status ("Thinking…", "Generating…"). The design tokens
+   here are bare HSL channels, so they MUST be wrapped in hsl() to be valid
+   gradient colors — using var(--foreground) raw yields an invalid (invisible)
+   gradient. A bright foreground band sweeps across muted-foreground text. */
+@utility shimmer {
+  color: transparent;
+  background-image: linear-gradient(
+    90deg,
+    hsl(var(--muted-foreground)) 0%,
+    hsl(var(--muted-foreground)) 35%,
+    hsl(var(--foreground)) 50%,
+    hsl(var(--muted-foreground)) 65%,
+    hsl(var(--muted-foreground)) 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shimmer-slide 1.6s linear infinite;
+}
+
+@keyframes shimmer-slide {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}

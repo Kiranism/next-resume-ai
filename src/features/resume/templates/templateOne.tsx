@@ -43,21 +43,21 @@ export default function ResumeTemplate({ formData }: TResumeTemplateProps) {
   const languages = formData?.languages ?? [];
   const educations = formData?.educations ?? [];
   const jobs = formData?.jobs ?? [];
+  const projects = formData?.projects ?? [];
+  const hidden = formData?.hiddenSections ?? [];
 
   return (
     <Document>
       <Page size='A4' style={tw('flex flex-row')}>
         {/* Black sidebar */}
         <View
-          style={tw(
-            'w-[32%] min-h-full flex flex-col gap-4 text-white bg-black p-6'
-          )}
+          style={tw('w-[32%] min-h-full flex flex-col text-white bg-black p-6')}
         >
-          <Text style={tw('text-2xl font-bold leading-none')}>
+          <Text style={tw('text-2xl font-bold leading-none mb-4')}>
             {pd?.fname ?? 'First Name'} {pd?.lname ?? 'Last Name'}
           </Text>
 
-          <View style={tw('flex flex-col gap-1')}>
+          <View style={tw('flex flex-col gap-1 mb-4')}>
             {pd?.email ? (
               <Text style={tw('text-xs text-[#cbd5e1]')}>{pd.email}</Text>
             ) : null}
@@ -82,8 +82,8 @@ export default function ResumeTemplate({ formData }: TResumeTemplateProps) {
             ) : null}
           </View>
 
-          {skills.length > 0 ? (
-            <View>
+          {!hidden.includes('skills') && skills.length > 0 ? (
+            <View style={tw('mb-4')}>
               <Text style={tw('text-sm font-bold text-white mb-1.5')}>
                 Skills
               </Text>
@@ -92,16 +92,16 @@ export default function ResumeTemplate({ formData }: TResumeTemplateProps) {
               />
             </View>
           ) : null}
-          {tools.length > 0 ? (
-            <View>
+          {!hidden.includes('tools') && tools.length > 0 ? (
+            <View style={tw('mb-4')}>
               <Text style={tw('text-sm font-bold text-white mb-1.5')}>
                 Tools
               </Text>
               <BulletedList items={tools.map((t) => ({ name: t.tool_name }))} />
             </View>
           ) : null}
-          {languages.length > 0 ? (
-            <View>
+          {!hidden.includes('languages') && languages.length > 0 ? (
+            <View style={tw('mb-4')}>
               <Text style={tw('text-sm font-bold text-white mb-1.5')}>
                 Languages
               </Text>
@@ -113,9 +113,9 @@ export default function ResumeTemplate({ formData }: TResumeTemplateProps) {
         </View>
 
         {/* White main */}
-        <View style={tw('w-[68%] flex flex-col gap-5 bg-white p-6')}>
-          {pd?.summary ? (
-            <View>
+        <View style={tw('w-[68%] flex flex-col bg-white p-6')}>
+          {!hidden.includes('summary') && pd?.summary ? (
+            <View style={tw('mb-5')}>
               <Text style={tw('text-base font-bold text-[#111827] mb-1.5')}>
                 Summary
               </Text>
@@ -123,14 +123,14 @@ export default function ResumeTemplate({ formData }: TResumeTemplateProps) {
             </View>
           ) : null}
 
-          {educations.length > 0 ? (
-            <View>
+          {!hidden.includes('education') && educations.length > 0 ? (
+            <View style={tw('mb-5')}>
               <Text style={tw('text-base font-bold text-[#111827] mb-1.5')}>
                 Education
               </Text>
-              <View style={tw('flex flex-col gap-2.5')}>
+              <View>
                 {educations.map((edu, i) => (
-                  <View key={i}>
+                  <View key={i} wrap={false} style={tw('mb-2.5')}>
                     <View
                       style={tw('flex flex-row justify-between items-baseline')}
                     >
@@ -156,14 +156,14 @@ export default function ResumeTemplate({ formData }: TResumeTemplateProps) {
             </View>
           ) : null}
 
-          {jobs.length > 0 ? (
-            <View>
+          {!hidden.includes('experience') && jobs.length > 0 ? (
+            <View style={tw('mb-5')}>
               <Text style={tw('text-base font-bold text-[#111827] mb-1.5')}>
                 Employment History
               </Text>
-              <View style={tw('flex flex-col gap-3')}>
+              <View>
                 {jobs.map((job, i) => (
-                  <View key={i} wrap={false}>
+                  <View key={i} wrap={false} style={tw('mb-3')}>
                     <View
                       style={tw('flex flex-row justify-between items-baseline')}
                     >
@@ -180,6 +180,37 @@ export default function ResumeTemplate({ formData }: TResumeTemplateProps) {
                     {job?.description ? (
                       <Text style={tw('text-sm mt-0.5 leading-relaxed')}>
                         {job.description}
+                      </Text>
+                    ) : null}
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
+          {!hidden.includes('projects') && projects.length > 0 ? (
+            <View style={tw('mb-5')}>
+              <Text style={tw('text-base font-bold text-[#111827] mb-1.5')}>
+                Projects
+              </Text>
+              <View>
+                {projects.map((proj, i) => (
+                  <View key={i} wrap={false} style={tw('mb-2.5')}>
+                    <View
+                      style={tw('flex flex-row justify-between items-baseline')}
+                    >
+                      <Text style={tw('text-sm font-bold')}>
+                        {proj?.name ?? ''}
+                      </Text>
+                      {proj?.link ? (
+                        <Text style={tw('text-xs text-[#7f7f7f]')}>
+                          {proj.link}
+                        </Text>
+                      ) : null}
+                    </View>
+                    {proj?.description ? (
+                      <Text style={tw('text-sm mt-0.5 leading-relaxed')}>
+                        {proj.description}
                       </Text>
                     ) : null}
                   </View>

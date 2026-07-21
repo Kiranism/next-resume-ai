@@ -16,6 +16,8 @@ export default function ResumeTemplateFive({ formData }: TResumeTemplateProps) {
   const languages = formData?.languages ?? [];
   const jobs = formData?.jobs ?? [];
   const educations = formData?.educations ?? [];
+  const projects = formData?.projects ?? [];
+  const hidden = formData?.hiddenSections ?? [];
 
   const contactLine = [
     pd?.email,
@@ -43,7 +45,7 @@ export default function ResumeTemplateFive({ formData }: TResumeTemplateProps) {
           ) : null}
         </View>
 
-        {summary ? (
+        {!hidden.includes('summary') && summary ? (
           <View style={tw('mb-4')}>
             <Text style={tw('text-sm font-bold border-b border-black mb-1')}>
               SUMMARY
@@ -52,7 +54,7 @@ export default function ResumeTemplateFive({ formData }: TResumeTemplateProps) {
           </View>
         ) : null}
 
-        {skills.length > 0 ? (
+        {!hidden.includes('skills') && skills.length > 0 ? (
           <View style={tw('mb-4')}>
             <Text style={tw('text-sm font-bold border-b border-black mb-1')}>
               SKILLS
@@ -66,7 +68,7 @@ export default function ResumeTemplateFive({ formData }: TResumeTemplateProps) {
           </View>
         ) : null}
 
-        {jobs.length > 0 ? (
+        {!hidden.includes('experience') && jobs.length > 0 ? (
           <View style={tw('mb-4')}>
             <Text style={tw('text-sm font-bold border-b border-black mb-1')}>
               EXPERIENCE
@@ -95,13 +97,32 @@ export default function ResumeTemplateFive({ formData }: TResumeTemplateProps) {
           </View>
         ) : null}
 
-        {educations.length > 0 ? (
+        {!hidden.includes('projects') && projects.length > 0 ? (
+          <View style={tw('mb-4')}>
+            <Text style={tw('text-sm font-bold border-b border-black mb-1')}>
+              PROJECTS
+            </Text>
+            {projects.map((proj, i) => (
+              <View key={i} style={tw('mb-2')} wrap={false}>
+                <Text style={tw('text-xs font-bold')}>{proj?.name ?? ''}</Text>
+                {proj?.link ? (
+                  <Text style={tw('text-xs')}>{proj.link}</Text>
+                ) : null}
+                {proj?.description ? (
+                  <Text style={tw('text-xs mt-1')}>{proj.description}</Text>
+                ) : null}
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {!hidden.includes('education') && educations.length > 0 ? (
           <View style={tw('mb-4')}>
             <Text style={tw('text-sm font-bold border-b border-black mb-1')}>
               EDUCATION
             </Text>
             {educations.map((edu, i) => (
-              <View key={i} style={tw('mb-2')}>
+              <View key={i} style={tw('mb-2')} wrap={false}>
                 <Text style={tw('text-xs font-bold')}>
                   {edu?.degree ?? ''}
                   {edu?.field ? ` in ${edu.field}` : ''}
@@ -117,7 +138,7 @@ export default function ResumeTemplateFive({ formData }: TResumeTemplateProps) {
           </View>
         ) : null}
 
-        {tools.length > 0 ? (
+        {!hidden.includes('tools') && tools.length > 0 ? (
           <View style={tw('mb-4')}>
             <Text style={tw('text-sm font-bold border-b border-black mb-1')}>
               TOOLS
@@ -131,7 +152,7 @@ export default function ResumeTemplateFive({ formData }: TResumeTemplateProps) {
           </View>
         ) : null}
 
-        {languages.length > 0 ? (
+        {!hidden.includes('languages') && languages.length > 0 ? (
           <View style={tw('mb-4')}>
             <Text style={tw('text-sm font-bold border-b border-black mb-1')}>
               LANGUAGES

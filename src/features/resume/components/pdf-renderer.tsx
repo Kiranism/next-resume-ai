@@ -1,10 +1,18 @@
 'use client';
 
 import { pdf } from '@react-pdf/renderer';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode
+} from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
+import { IconDownload, IconExternalLink } from '@tabler/icons-react';
 import { TResumeEditFormValues } from '../utils/form-schema';
 import { getTemplate } from '../templates/registry';
 import { Icons } from '@/components/icons';
@@ -19,10 +27,13 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 
 const PAGE_WIDTH = 640;
 const PAGE_HEIGHT = Math.round(PAGE_WIDTH * (297 / 210)); // A4 aspect ratio
+const FIT_PADDING = 24; // breathing room around the fitted page
 
 type TPdfRendererProps = {
   formData: TResumeEditFormValues;
   templateId: string;
+  // Optional page-level actions rendered on the right of the toolbar.
+  actions?: ReactNode;
 };
 
 type PdfBufferProps = {
@@ -67,7 +78,7 @@ const PdfBuffer = memo(function PdfBuffer({
 
 type Slot = 'a' | 'b';
 
-const PdfRenderer = ({ formData, templateId }: TPdfRendererProps) => {
+const PdfRenderer = ({ formData, templateId, actions }: TPdfRendererProps) => {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -82,6 +93,11 @@ const PdfRenderer = ({ formData, templateId }: TPdfRendererProps) => {
   const [front, setFront] = useState<Slot>('a');
   const pendingRef = useRef<Slot | null>(null);
   const [hasRendered, setHasRendered] = useState(false);
+
+  // Fit the fixed-size page into the available area so a full page is visible
+  // without scrolling (capped at 1× to stay crisp).
+  const previewAreaRef = useRef<HTMLDivElement>(null);
+  const [fitScale, setFitScale] = useState(1);
 
   const template = getTemplate(templateId);
   const Template = template?.component;
@@ -122,6 +138,29 @@ const PdfRenderer = ({ formData, templateId }: TPdfRendererProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Track the available preview area and recompute the fit scale.
+  useEffect(() => {
+    const el = previewAreaRef.current;
+    if (!el) return;
+    const update = () => {
+      const cw = el.clientWidth;
+      const ch = el.clientHeight;
+      if (cw > 0 && ch > 0) {
+        setFitScale(
+          Math.min(
+            (cw - FIT_PADDING) / PAGE_WIDTH,
+            (ch - FIT_PADDING) / PAGE_HEIGHT,
+            1
+          )
+        );
+      }
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const promote = useCallback((slot: Slot) => {
     if (pendingRef.current === slot) {
       pendingRef.current = null;
@@ -146,91 +185,122 @@ const PdfRenderer = ({ formData, templateId }: TPdfRendererProps) => {
   const showLoader = !hasRendered;
 
   return (
-    <div className='relative flex flex-col items-center'>
-      <div
-        id='resume-pdf-preview'
-        className='relative overflow-hidden bg-white shadow'
-        style={{ width: PAGE_WIDTH, minHeight: PAGE_HEIGHT }}
-      >
-        <div
-          className='absolute inset-0 transition-opacity duration-150'
-          style={{ opacity: front === 'a' ? 1 : 0 }}
-        >
-          <PdfBuffer
-            url={urls.a}
-            pageNumber={currentPage}
-            onLoadSuccess={onLoad}
-            onRenderSuccess={onRenderA}
-          />
-        </div>
-        <div
-          className='absolute inset-0 transition-opacity duration-150'
-          style={{ opacity: front === 'b' ? 1 : 0 }}
-        >
-          <PdfBuffer
-            url={urls.b}
-            pageNumber={currentPage}
-            onLoadSuccess={onLoad}
-            onRenderSuccess={onRenderB}
-          />
-        </div>
-
-        {showLoader && (
-          <div className='text-muted-foreground absolute inset-0 flex items-center justify-center text-sm'>
-            Rendering preview…
-          </div>
-        )}
-      </div>
-
-      <div className='my-4' style={{ width: PAGE_WIDTH }}>
-        {numPages && numPages > 0 && (
-          <div className='flex items-center justify-between gap-2'>
-            <div className='flex flex-wrap items-center gap-1'>
+    <div className='flex h-full w-full flex-col'>
+      {/* Toolbar: page controls on the left, actions + download on the right */}
+      <div className='flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2'>
+        <div className='flex items-center gap-1'>
+          {numPages && numPages > 0 ? (
+            <>
               <Button
                 size='xs'
+                variant='outline'
                 onClick={() => goToPage(currentPage - 1)}
                 disabled={currentPage <= 1}
-                className='disabled:opacity-50'
               >
                 <Icons.chevronLeft className='h-4 w-4' />
               </Button>
-
-              {Array.from({ length: numPages }, (_, i) => i + 1).map((page) => (
-                <Button
-                  key={page}
-                  size='sm'
-                  variant={page === currentPage ? 'default' : 'outline'}
-                  onClick={() => goToPage(page)}
-                >
-                  {page}
-                </Button>
-              ))}
-
+              <span className='text-muted-foreground min-w-16 text-center text-xs tabular-nums'>
+                Page {currentPage} / {numPages}
+              </span>
               <Button
                 size='xs'
+                variant='outline'
                 onClick={() => goToPage(currentPage + 1)}
                 disabled={currentPage >= numPages}
-                className='disabled:opacity-50'
               >
                 <Icons.chevronRight className='h-4 w-4' />
               </Button>
-            </div>
+            </>
+          ) : (
+            <span className='text-muted-foreground text-xs'>Preview</span>
+          )}
+        </div>
+        <div className='flex flex-wrap items-center gap-2'>
+          {actions}
+          {urls[front] && (
+            <Button
+              size='sm'
+              variant='outline'
+              nativeButton={false}
+              render={
+                <a
+                  href={urls[front] ?? undefined}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                />
+              }
+            >
+              <IconExternalLink className='mr-1 h-4 w-4' /> Open
+            </Button>
+          )}
+          {urls[front] && (
+            <Button
+              size='sm'
+              variant='outline'
+              nativeButton={false}
+              render={
+                <a
+                  href={urls[front] ?? undefined}
+                  download={`next-resume-${Date.now()}.pdf`}
+                />
+              }
+            >
+              <IconDownload className='mr-1 h-4 w-4' /> Download PDF
+            </Button>
+          )}
+        </div>
+      </div>
 
-            {urls[front] && (
-              <Button
-                render={
-                  <a
-                    href={urls[front] ?? undefined}
-                    download={`next-resume-${Date.now()}.pdf`}
-                    className='text-primary'
-                  />
-                }
+      {/* Preview area: a full page, scaled to fit without scrolling */}
+      <div
+        ref={previewAreaRef}
+        className='bg-accent relative min-h-0 flex-1 overflow-hidden'
+      >
+        <div className='absolute inset-0 flex items-center justify-center'>
+          <div
+            style={{
+              width: PAGE_WIDTH,
+              height: PAGE_HEIGHT,
+              transform: `scale(${fitScale})`,
+              transformOrigin: 'center center'
+            }}
+          >
+            <div
+              id='resume-pdf-preview'
+              className='relative overflow-hidden bg-white shadow'
+              style={{ width: PAGE_WIDTH, height: PAGE_HEIGHT }}
+            >
+              <div
+                className='absolute inset-0 transition-opacity duration-150'
+                style={{ opacity: front === 'a' ? 1 : 0 }}
               >
-                Download PDF
-              </Button>
-            )}
+                <PdfBuffer
+                  url={urls.a}
+                  pageNumber={currentPage}
+                  onLoadSuccess={onLoad}
+                  onRenderSuccess={onRenderA}
+                />
+              </div>
+              <div
+                className='absolute inset-0 transition-opacity duration-150'
+                style={{ opacity: front === 'b' ? 1 : 0 }}
+              >
+                <PdfBuffer
+                  url={urls.b}
+                  pageNumber={currentPage}
+                  onLoadSuccess={onLoad}
+                  onRenderSuccess={onRenderB}
+                />
+              </div>
+
+              {showLoader && (
+                <div className='text-muted-foreground absolute inset-0 flex items-center justify-center text-sm'>
+                  Rendering preview…
+                </div>
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

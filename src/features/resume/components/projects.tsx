@@ -13,39 +13,29 @@ import { type TResumeEditFormValues } from '../utils/form-schema';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { SectionShell } from './section-shell';
 
-interface EducationProps {
+interface ProjectsProps {
   control: Control<TResumeEditFormValues>;
 }
 
-export const Education = ({ control }: EducationProps) => {
+export function Projects({ control }: ProjectsProps) {
   const { fields, append, remove } = useFieldArray({
     control,
-    name: 'educations'
+    name: 'projects'
   });
 
   return (
     <SectionShell
-      title='Education'
-      sectionKey='education'
+      title='Projects'
+      sectionKey='projects'
       action={
         <Button
           type='button'
           variant='outline'
           size='sm'
-          onClick={() =>
-            append({
-              school: '',
-              degree: '',
-              field: '',
-              description: '',
-              startDate: '',
-              endDate: '',
-              city: ''
-            })
-          }
+          onClick={() => append({ name: '', description: '', link: '' })}
         >
           <PlusCircle className='mr-2 h-4 w-4' />
-          Add Education
+          Add Project
         </Button>
       }
     >
@@ -66,10 +56,10 @@ export const Education = ({ control }: EducationProps) => {
             <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
               <FormField
                 control={control}
-                name={`educations.${index}.school`}
+                name={`projects.${index}.name`}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>School/University</FormLabel>
+                    <FormLabel>Project Name</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -80,68 +70,16 @@ export const Education = ({ control }: EducationProps) => {
 
               <FormField
                 control={control}
-                name={`educations.${index}.degree`}
+                name={`projects.${index}.link`}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Degree</FormLabel>
+                    <FormLabel>Link</FormLabel>
                     <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={control}
-                name={`educations.${index}.field`}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Field of Study</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={control}
-                name={`educations.${index}.startDate`}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Start Date</FormLabel>
-                    <FormControl>
-                      <Input type='date' {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={control}
-                name={`educations.${index}.endDate`}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>End Date</FormLabel>
-                    <FormControl>
-                      <Input type='date' {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={control}
-                name={`educations.${index}.city`}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
+                      <Input
+                        placeholder='https://…'
+                        {...field}
+                        value={field.value ?? ''}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -151,7 +89,7 @@ export const Education = ({ control }: EducationProps) => {
 
             <FormField
               control={control}
-              name={`educations.${index}.description`}
+              name={`projects.${index}.description`}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Description</FormLabel>
@@ -171,4 +109,4 @@ export const Education = ({ control }: EducationProps) => {
       </div>
     </SectionShell>
   );
-};
+}

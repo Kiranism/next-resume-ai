@@ -71,6 +71,33 @@ export const useUploadPreviewImage = () => {
   });
 };
 
+export const useResumeChatMessages = (resumeId: string) => {
+  return useQuery({
+    queryKey: ['resume-chat', resumeId],
+    queryFn: async () => {
+      const response = await client.chat.getMessages.$get({ resumeId });
+      return response.json();
+    },
+    enabled: !!resumeId,
+    // History is hydrated once into local state, then managed there.
+    staleTime: Infinity,
+    refetchOnWindowFocus: false
+  });
+};
+
+export const useClearResumeChat = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (resumeId: string) => {
+      const response = await client.chat.clearMessages.$post({ resumeId });
+      return response.json();
+    },
+    onSuccess: (_data, resumeId) => {
+      queryClient.invalidateQueries({ queryKey: ['resume-chat', resumeId] });
+    }
+  });
+};
+
 export const useAtsReport = (resumeId: string, enabled: boolean) => {
   return useQuery({
     queryKey: ['ats-report', resumeId],

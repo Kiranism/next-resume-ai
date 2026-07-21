@@ -30,7 +30,17 @@ export function ProfileFilter() {
     <div className='mb-6'>
       <Select value={profileId || 'all'} onValueChange={handleProfileChange}>
         <SelectTrigger className='w-[280px]'>
-          <SelectValue placeholder='Filter by profile' />
+          {/* Base UI's SelectValue renders the raw value by default — map it
+              back to the profile's name so the label shows when selected. */}
+          <SelectValue placeholder='Filter by profile'>
+            {(value) => {
+              if (!value || value === 'all') return 'All Profiles';
+              const profile = profiles?.find((p) => p.id === value);
+              return profile
+                ? `${profile.firstname} ${profile.lastname}`
+                : 'All Profiles';
+            }}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value='all'>All Profiles</SelectItem>

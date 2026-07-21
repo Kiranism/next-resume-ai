@@ -27,7 +27,8 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-  SidebarRail
+  SidebarRail,
+  useSidebar
 } from '@/components/ui/sidebar';
 import { navItems } from '@/constants/data';
 import { useClerk, useUser } from '@clerk/nextjs';
@@ -36,7 +37,8 @@ import {
   Bell,
   ChevronRight,
   ChevronsUpDown,
-  CreditCard
+  CreditCard,
+  PanelLeft
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -71,6 +73,7 @@ export default function AppSidebar() {
   const { user } = useUser();
   const { signOut } = useClerk();
   const pathname = usePathname();
+  const { toggleSidebar, state } = useSidebar();
 
   return (
     <Sidebar collapsible='icon'>
@@ -144,6 +147,15 @@ export default function AppSidebar() {
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={toggleSidebar}
+              tooltip={state === 'expanded' ? 'Collapse' : 'Expand'}
+            >
+              <PanelLeft />
+              <span>{state === 'expanded' ? 'Collapse' : 'Expand'}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger

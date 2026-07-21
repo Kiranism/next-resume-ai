@@ -1,36 +1,32 @@
-// sync auth status to database
-'use client';
-import { client } from '@/lib/client';
-import { useQuery } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+// Ensure the signed-in user has a DB account, then continue — done server-side
+// so there is no client-side "syncing…" screen or polling pause.
+import { currentUser } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
+import { nanoid } from 'nanoid';
+import { db } from '@/server/db';
+import { accounts } from '@/server/db/schema';
 
-export default function Page() {
-  const router = useRouter();
-  const { data, isLoading } = useQuery({
-    queryKey: ['get-database-sync-status'],
-    refetchInterval: (query) => {
-      return query.state.data?.isSynced ? false : 1000;
-    },
-    queryFn: async () => {
-      const res = await client.auth.getDatabaseSyncStatus.$get();
-      return await res.json();
-    }
+export default async function WelcomePage() {
+  const auth = await currentUser();
+  if (!auth) {
+    redirect('/sign-in');
+  }
+
+  const existing = await db.query.accounts.findFirst({
+    where: (accounts, { eq }) => eq(accounts.externalId, auth.id)
   });
 
-  useEffect(() => {
-    if (data?.isSynced) {
-      router.push('/dashboard/profile');
-    }
-  }, [data, router]);
+  if (!existing) {
+    await db
+      .insert(accounts)
+      .values({
+        id: nanoid(),
+        externalId: auth.id,
+        email: auth.emailAddresses[0]?.emailAddress ?? ''
+      })
+      // externalId is unique — ignore a race where a parallel request won.
+      .onConflictDoNothing({ target: accounts.externalId });
+  }
 
-  return (
-    <div className='flex min-h-screen flex-col items-center justify-center'>
-      <div className='flex flex-col items-center'>
-        <Loader2 className='mb-4 size-8 animate-spin' />
-        <p className='text-lg'>Syncing your account data, please wait...</p>
-      </div>
-    </div>
-  );
+  redirect('/dashboard/profile');
 }

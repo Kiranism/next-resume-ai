@@ -46,6 +46,8 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
   const skills = formData?.skills ?? [];
   const tools = formData?.tools ?? [];
   const languages = formData?.languages ?? [];
+  const projects = formData?.projects ?? [];
+  const hidden = formData?.hiddenSections ?? [];
 
   return (
     <Document>
@@ -84,7 +86,7 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
         </View>
 
         {/* Summary */}
-        {pd?.summary ? (
+        {!hidden.includes('summary') && pd?.summary ? (
           <View style={tw('mb-6')}>
             <Text style={tw('text-lg font-bold text-primary mb-2')}>
               Professional Summary
@@ -97,14 +99,14 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
         <View style={tw('flex flex-row')}>
           {/* Left */}
           <View style={tw('w-2/3 pr-5')}>
-            {jobs.length > 0 ? (
+            {!hidden.includes('experience') && jobs.length > 0 ? (
               <View style={tw('mb-6')}>
                 <Text style={tw('text-lg font-bold text-primary mb-2')}>
                   Work Experience
                 </Text>
-                <View style={tw('flex flex-col gap-3')}>
+                <View>
                   {jobs.map((job, index) => (
-                    <View wrap={false} key={index}>
+                    <View wrap={false} key={index} style={tw('mb-3')}>
                       <Text style={tw('text-base font-bold text-primary')}>
                         {job?.jobTitle ?? ''}
                       </Text>
@@ -125,14 +127,41 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
               </View>
             ) : null}
 
-            {educations.length > 0 ? (
+            {!hidden.includes('projects') && projects.length > 0 ? (
+              <View style={tw('mb-6')}>
+                <Text style={tw('text-lg font-bold text-primary mb-2')}>
+                  Projects
+                </Text>
+                <View>
+                  {projects.map((proj, index) => (
+                    <View wrap={false} key={index} style={tw('mb-3')}>
+                      <Text style={tw('text-base font-bold text-primary')}>
+                        {proj?.name ?? ''}
+                      </Text>
+                      {proj?.link ? (
+                        <Text style={tw('text-xs text-muted mt-0.5')}>
+                          {proj.link}
+                        </Text>
+                      ) : null}
+                      {proj?.description ? (
+                        <Text style={tw('text-sm mt-1 leading-relaxed')}>
+                          {proj.description}
+                        </Text>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
+            {!hidden.includes('education') && educations.length > 0 ? (
               <View style={tw('mb-6')}>
                 <Text style={tw('text-lg font-bold text-primary mb-2')}>
                   Education
                 </Text>
-                <View style={tw('flex flex-col gap-3')}>
+                <View>
                   {educations.map((edu, index) => (
-                    <View key={index}>
+                    <View key={index} wrap={false} style={tw('mb-3')}>
                       <Text style={tw('text-base font-bold text-primary')}>
                         {edu?.degree ?? ''}
                         {edu?.field ? ` in ${edu.field}` : ''}
@@ -157,7 +186,7 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
 
           {/* Right */}
           <View style={tw('w-1/3 pl-5 border-l border-[#e5e7eb]')}>
-            {skills.length > 0 ? (
+            {!hidden.includes('skills') && skills.length > 0 ? (
               <View style={tw('mb-6')}>
                 <Text style={tw('text-lg font-bold text-primary mb-2')}>
                   Skills
@@ -167,7 +196,7 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
                 />
               </View>
             ) : null}
-            {tools.length > 0 ? (
+            {!hidden.includes('tools') && tools.length > 0 ? (
               <View style={tw('mb-6')}>
                 <Text style={tw('text-lg font-bold text-primary mb-2')}>
                   Tools
@@ -177,7 +206,7 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
                 />
               </View>
             ) : null}
-            {languages.length > 0 ? (
+            {!hidden.includes('languages') && languages.length > 0 ? (
               <View style={tw('mb-6')}>
                 <Text style={tw('text-lg font-bold text-primary mb-2')}>
                   Languages

@@ -22,7 +22,8 @@ type TResumeTemplateProps = {
 };
 
 const SectionTitle = ({ children }: { children: ReactNode }) => (
-  <View style={tw('border-b border-accent mb-2 pb-1')}>
+  // minPresenceAhead keeps a header from being orphaned at the bottom of a page.
+  <View style={tw('border-b border-accent mb-2 pb-1')} minPresenceAhead={24}>
     <Text style={tw('text-base font-bold text-primary')}>{children}</Text>
   </View>
 );
@@ -45,6 +46,8 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
     .filter(Boolean);
   const jobs = formData?.jobs ?? [];
   const educations = formData?.educations ?? [];
+  const projects = formData?.projects ?? [];
+  const hidden = formData?.hiddenSections ?? [];
 
   const contact = [
     pd?.phone,
@@ -70,7 +73,7 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
           ) : null}
         </View>
 
-        {skills.length > 0 ? (
+        {!hidden.includes('skills') && skills.length > 0 ? (
           <View style={tw('mb-5')}>
             <SectionTitle>Technical Skills</SectionTitle>
             <Text style={tw('text-sm leading-relaxed')}>
@@ -79,12 +82,12 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
           </View>
         ) : null}
 
-        {jobs.length > 0 ? (
+        {!hidden.includes('experience') && jobs.length > 0 ? (
           <View style={tw('mb-5')}>
             <SectionTitle>Work Experience</SectionTitle>
-            <View style={tw('flex flex-col gap-3')}>
+            <View>
               {jobs.map((job, index) => (
-                <View key={index} wrap={false}>
+                <View key={index} wrap={false} style={tw('mb-3')}>
                   <View
                     style={tw('flex flex-row justify-between items-baseline')}
                   >
@@ -111,7 +114,34 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
           </View>
         ) : null}
 
-        {tools.length > 0 ? (
+        {!hidden.includes('projects') && projects.length > 0 ? (
+          <View style={tw('mb-5')}>
+            <SectionTitle>Projects</SectionTitle>
+            <View>
+              {projects.map((proj, index) => (
+                <View key={index} wrap={false} style={tw('mb-3')}>
+                  <View
+                    style={tw('flex flex-row justify-between items-baseline')}
+                  >
+                    <Text style={tw('text-sm font-bold text-primary')}>
+                      {proj?.name ?? ''}
+                    </Text>
+                    {proj?.link ? (
+                      <Text style={tw('text-xs text-muted')}>{proj.link}</Text>
+                    ) : null}
+                  </View>
+                  {proj?.description ? (
+                    <View style={tw('mt-1')}>
+                      <BulletPoint text={proj.description} />
+                    </View>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        {!hidden.includes('tools') && tools.length > 0 ? (
           <View style={tw('mb-5')}>
             <SectionTitle>Tools</SectionTitle>
             <Text style={tw('text-sm leading-relaxed')}>
@@ -120,12 +150,12 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
           </View>
         ) : null}
 
-        {educations.length > 0 ? (
+        {!hidden.includes('education') && educations.length > 0 ? (
           <View style={tw('mb-5')}>
             <SectionTitle>Education</SectionTitle>
-            <View style={tw('flex flex-col gap-2')}>
+            <View>
               {educations.map((edu, index) => (
-                <View key={index}>
+                <View key={index} wrap={false} style={tw('mb-2')}>
                   <View
                     style={tw('flex flex-row justify-between items-baseline')}
                   >
@@ -148,7 +178,7 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
           </View>
         ) : null}
 
-        {languages.length > 0 ? (
+        {!hidden.includes('languages') && languages.length > 0 ? (
           <View style={tw('mb-5')}>
             <SectionTitle>Languages</SectionTitle>
             <Text style={tw('text-sm leading-relaxed')}>
