@@ -2,7 +2,7 @@ import {
   resumeFormSchema,
   TResumeEditFormValues
 } from '@/features/resume/utils/form-schema';
-import { generateJsonContent } from './google-ai-model';
+import { generateJsonContent } from './ai-model';
 import { resumeEditFormSchema } from '@/features/resume/utils/form-schema';
 import { ZodObject } from 'zod';
 import { Profile } from '@/server/db/schema/profiles';

@@ -1,4 +1,4 @@
-import { generateJsonContent } from './google-ai-model';
+import { generateJsonContent } from './ai-model';
 
 export type AtsReport = {
   score: number;
