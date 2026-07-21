@@ -223,5 +223,60 @@ export const resumeRouter = j.router({
         console.error('Error in uploadPreviewImage:', error);
         return c.json({ error: 'Failed to upload image' }, 500);
       }
+    }),
+
+  // Delete a resume (owner only)
+  deleteResume: privateProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ c, ctx, input }) => {
+      const { user } = ctx;
+
+      const [deleted] = await db
+        .delete(resumes)
+        .where(and(eq(resumes.id, input.id), eq(resumes.userId, user.id)))
+        .returning();
+
+      if (!deleted) {
+        return c.json({ error: 'Not found' }, 404);
+      }
+
+      return c.json({ id: deleted.id });
+    }),
+
+  // Duplicate a resume (owner only)
+  duplicateResume: privateProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ c, ctx, input }) => {
+      const { user } = ctx;
+
+      const source = await db.query.resumes.findFirst({
+        where: and(eq(resumes.id, input.id), eq(resumes.userId, user.id))
+      });
+
+      if (!source) {
+        return c.json({ error: 'Not found' }, 404);
+      }
+
+      const [copy] = await db
+        .insert(resumes)
+        .values({
+          id: nanoid(),
+          userId: source.userId,
+          profileId: source.profileId,
+          jdJobTitle: source.jdJobTitle,
+          employer: source.employer,
+          jdPostDetails: source.jdPostDetails,
+          personalDetails: source.personalDetails,
+          jobs: source.jobs,
+          education: source.education,
+          skills: source.skills,
+          tools: source.tools,
+          languages: source.languages,
+          previewImageUrl: source.previewImageUrl,
+          updatedAt: new Date()
+        })
+        .returning();
+
+      return c.json({ id: copy.id });
     })
 });

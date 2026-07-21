@@ -82,3 +82,29 @@ export const useAtsReport = (resumeId: string, enabled: boolean) => {
     staleTime: 60_000
   });
 };
+
+export const useDeleteResume = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await client.resume.deleteResume.$post({ id });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['resumes'] });
+    }
+  });
+};
+
+export const useDuplicateResume = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await client.resume.duplicateResume.$post({ id });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['resumes'] });
+    }
+  });
+};
