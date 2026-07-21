@@ -20,6 +20,12 @@ vision; plans are written one slice at a time on request.
 | 004  | Enforce resource ownership (fix IDOR) on resume & profile access | P1 | M | 003 | DONE (`e2a1cbf`) — reviewed & integrated; tsc 0 |
 | 005  | Stateless per-request AI generation (fix shared Gemini session) | P1 | S | — | DONE (`1f77768`) — reviewed & integrated; tsc 0 |
 | 006  | DX: fix ESLint v8/v9 conflict + add `typecheck` script | P1 | S | — | DONE (`efba691`) — reviewed & integrated; `pnpm lint` now exits 0 |
+| 007  | Trustworthy generation (no orphan rows + quota enforcement) [D3] | P1 | M | 004, 005 | IN PROGRESS (executor dispatched) |
+
+Direction picks (from `/improve next`) being built: **D3** (007, trustworthy
+generation), **D1** (ATS score + report — spike+build, queued), **D4** (resume
+lifecycle: delete/duplicate/re-tailor — queued). These share `resume-router.ts`,
+so they run sequentially, each based on the prior integrated tip.
 
 All four DONE plans were implemented by an executor in an isolated worktree,
 reviewed by the advisor (done-criteria re-run, scope checked, diff read), and
