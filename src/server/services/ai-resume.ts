@@ -3,6 +3,7 @@ import {
   TResumeEditFormValues
 } from '@/features/resume/utils/form-schema';
 import { generateJsonContent } from './ai-model';
+import { ATS_WRITING_GUIDELINES } from './resume-guidance';
 import { resumeEditFormSchema } from '@/features/resume/utils/form-schema';
 import { ZodObject } from 'zod';
 import { Profile } from '@/server/db/schema/profiles';
@@ -92,6 +93,8 @@ export async function generateResumeContent(
             .join('\n')
         : 'No education recorded'
     }
+
+    ${ATS_WRITING_GUIDELINES}
 
     Instructions:
     1. Create a compelling professional summary (3-5 sentences) that:

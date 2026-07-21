@@ -1,4 +1,5 @@
 import { generateJsonContent } from './ai-model';
+import { ATS_SCORING_GUIDELINES } from './resume-guidance';
 
 export type AtsReport = {
   score: number;
@@ -23,6 +24,8 @@ ${input.jobDescription}
 
 RESUME (JSON):
 ${input.resumeText}
+
+${ATS_SCORING_GUIDELINES}
 
 Return a JSON object with EXACTLY these fields and nothing else:
 {
