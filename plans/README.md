@@ -36,6 +36,14 @@ vision; plans are written one slice at a time on request.
 **All backlog items (010–014) implemented. 13 plans executed + reviewed +
 integrated (001 superseded). PDF/DOCX import upload deferred (see plan 014 notes).**
 
+| 015 | Eliminate PDF preview flash — ping-pong double-buffer + fixed sizing | P1 | M | 002 | IN PROGRESS (executor dispatched) |
+
+Plan 015 supersedes plan 002's double-buffer: runtime testing showed 002 still
+flashed white (missing fixed Page sizing + a persistent buffer). 015 rewrites the
+renderer with a true ping-pong buffer. Removes the flash; still ~0.3s update lag
+(react-pdf can't be truly instant — the HTML-preview route remains the fallback if
+instant is required).
+
 Direction picks (from `/improve next`) being built: **D3** (007, trustworthy
 generation), **D1** (ATS score + report — spike+build, queued), **D4** (resume
 lifecycle: delete/duplicate/re-tailor — queued). These share `resume-router.ts`,
