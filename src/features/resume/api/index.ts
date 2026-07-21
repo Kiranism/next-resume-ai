@@ -70,3 +70,15 @@ export const useUploadPreviewImage = () => {
     }
   });
 };
+
+export const useAtsReport = (resumeId: string, enabled: boolean) => {
+  return useQuery({
+    queryKey: ['ats-report', resumeId],
+    queryFn: async () => {
+      const response = await client.ats.getReport.$get({ resumeId });
+      return await response.json();
+    },
+    enabled: enabled && !!resumeId,
+    staleTime: 60_000
+  });
+};

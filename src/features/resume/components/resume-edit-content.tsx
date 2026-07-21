@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { EditResumeForm } from '@/features/resume/components/edit-resume-form';
 import { ModeToggle } from '@/features/resume/components/mode-toggle';
 import PdfRenderer from '@/features/resume/components/pdf-renderer';
+import { AtsReportDialog } from '@/features/resume/components/ats-report-dialog';
 import { TemplateSelection } from '@/features/resume/components/template-selection';
 import { useTemplateStore } from '@/features/resume/store/use-template-store';
 import {
@@ -120,7 +121,10 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
           <ResizableHandle />
           <ResizablePanel defaultSize={55} minSize={45}>
             <div className='h-full w-full'>
-              <ScrollArea className='h-[calc(100vh)]'>
+              <div className='flex justify-end p-2'>
+                <AtsReportDialog resumeId={resume.id} />
+              </div>
+              <ScrollArea className='h-[calc(100vh-56px)]'>
                 <div className='relative flex h-full justify-center bg-accent pt-2'>
                   <div className='origin-top scale-90'>
                     <PdfRenderer
