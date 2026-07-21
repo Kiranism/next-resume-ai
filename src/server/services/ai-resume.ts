@@ -4,35 +4,9 @@ import {
 } from '@/features/resume/utils/form-schema';
 import { generateJsonContent } from './ai-model';
 import { ATS_WRITING_GUIDELINES } from './resume-guidance';
-import { resumeEditFormSchema } from '@/features/resume/utils/form-schema';
-import { z, ZodObject } from 'zod';
+import { z } from 'zod';
 import { Profile } from '@/server/db/schema/profiles';
 import { ProfileWithRelations } from '../routers/profile-router';
-
-function getSchemaStructure(schema: ZodObject<any>) {
-  const shape = schema.shape;
-  return JSON.stringify(
-    shape,
-    (key, value) => {
-      if (value?._def?.typeName === 'ZodObject') {
-        return getSchemaStructure(value);
-      }
-      if (value?._def?.typeName === 'ZodArray') {
-        return [getSchemaStructure(value._def.type)];
-      }
-      if (value?._def?.typeName === 'ZodString') {
-        return 'string';
-      }
-      if (value?._def?.typeName === 'ZodOptional') {
-        return value._def.innerType._def.typeName === 'ZodString'
-          ? 'string'
-          : value._def.innerType;
-      }
-      return value;
-    },
-    2
-  );
-}
 
 // Lenient item schemas: accept a plain string OR an object and normalize to the
 // expected { <name>, proficiency_level } shape; never throw (per-item .catch).
@@ -92,8 +66,6 @@ export async function generateResumeContent(
   },
   profile: ProfileWithRelations
 ): Promise<TResumeEditFormValues> {
-  const schemaStructure = getSchemaStructure(resumeEditFormSchema);
-
   const prompt = `
     Generate a professional resume based on the following information (dont mention the company name this is a job description where we wanted to apply so make it ats friendly by using above or following information):
 
@@ -146,18 +118,37 @@ export async function generateResumeContent(
     ${ATS_WRITING_GUIDELINES}
 
     Instructions:
-    1. Create a compelling professional summary (3-5 sentences) that:
-       - Highlights the candidate's years of experience
-       - Emphasizes relevant skills for the target position
-       - Showcases key achievements from work history
-       - Aligns with the job description requirements
-    2. Extract key skills and tools from both the job description and work history
-    3. Format all dates as YYYY-MM-DD
-    4. Structure the response as a JSON object matching exactly this schema:
-    ${schemaStructure}
-
-    The professional summary should be included in personal_details.summary and must be at least 3 characters long.
-    Focus on making the summary impactful and relevant to the target position.
+    1. Write a compelling professional summary (3-5 sentences) in
+       personal_details.summary that highlights years of experience, emphasizes the
+       skills most relevant to the target position, showcases key achievements from
+       the work history, and aligns with the job description. Set
+       personal_details.resume_job_title to the target job title.
+    2. Populate ALL of the sections below from the job description and the work
+       history — never leave them empty:
+       - skills: 8-14 of the most relevant hard and soft skills for the target role.
+         Use the job description's exact terminology where it matches.
+       - tools: 5-10 concrete tools, technologies, frameworks, or platforms relevant
+         to the role.
+       - languages: spoken/human languages the candidate likely knows (e.g. English).
+         If none can be reasonably inferred, use an empty array — never invent.
+    3. Do NOT return work experience or education — those come from the candidate
+       profile, not from you.
+    4. Return ONLY a JSON object with EXACTLY these field names and this shape:
+    {
+      "personal_details": {
+        "resume_job_title": "string",
+        "summary": "string"
+      },
+      "skills": [
+        { "skill_name": "string", "proficiency_level": "Beginner | Intermediate | Advanced | Expert" }
+      ],
+      "tools": [
+        { "tool_name": "string", "proficiency_level": "Beginner | Intermediate | Advanced | Expert" }
+      ],
+      "languages": [
+        { "lang_name": "string", "proficiency_level": "Basic | Conversational | Fluent | Native" }
+      ]
+    }
   `;
 
   try {
