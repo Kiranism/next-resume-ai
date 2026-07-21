@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Loader2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,11 +14,40 @@ import {
   DialogTrigger
 } from '@/components/ui/dialog';
 import { useImportProfile } from '../api';
+import { extractPdfText } from '../utils/extract-pdf-text';
 
 export function ImportProfileDialog() {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
+  const [isReading, setIsReading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { mutateAsync: importProfile, isPending } = useImportProfile();
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      toast.error('Please upload a PDF file');
+      return;
+    }
+    setIsReading(true);
+    try {
+      const extracted = await extractPdfText(file);
+      if (extracted.length < 30) {
+        toast.error(
+          "Couldn't read text from this PDF (is it a scan/image?). Try pasting the text instead."
+        );
+        return;
+      }
+      setText(extracted);
+      toast.success('Extracted — review below, then Parse & Import');
+    } catch {
+      toast.error('Could not read this PDF');
+    } finally {
+      setIsReading(false);
+    }
+  };
 
   const handleImport = async () => {
     if (!text.trim()) return;
@@ -39,21 +68,43 @@ export function ImportProfileDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant='outline'>Import from text</Button>
+        <Button variant='outline'>Import resume</Button>
       </DialogTrigger>
       <DialogContent className='sm:max-w-lg'>
         <DialogHeader>
-          <DialogTitle>Import a profile from text</DialogTitle>
+          <DialogTitle>Import a profile</DialogTitle>
         </DialogHeader>
         <p className='text-sm text-muted-foreground'>
-          Paste your existing resume or CV text. We&apos;ll parse it into a
+          Upload your resume PDF (or paste its text). We&apos;ll parse it into a
           profile you can review and edit.
         </p>
+
+        <input
+          ref={fileInputRef}
+          type='file'
+          accept='application/pdf,.pdf'
+          className='hidden'
+          onChange={handleFile}
+        />
+        <Button
+          type='button'
+          variant='outline'
+          disabled={isReading}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {isReading ? (
+            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+          ) : (
+            <Upload className='mr-2 h-4 w-4' />
+          )}
+          {isReading ? 'Reading PDF…' : 'Upload PDF'}
+        </Button>
+
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder='Paste your resume text here…'
-          className='min-h-[220px]'
+          placeholder='…or paste your resume text here'
+          className='min-h-[200px]'
         />
         <DialogFooter>
           <Button onClick={handleImport} disabled={isPending || !text.trim()}>
