@@ -61,3 +61,16 @@ export const useDeleteProfile = () => {
     }
   });
 };
+
+export const useImportProfile = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (text: string) => {
+      const response = await client.profile.importProfile.$post({ text });
+      return await response.json();
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+    }
+  });
+};

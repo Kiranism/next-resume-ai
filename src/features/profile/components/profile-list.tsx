@@ -13,6 +13,7 @@ import { useState, useCallback } from 'react';
 import { useProfiles } from '../api';
 import CreateProfileModal from './create-profile-modal';
 import { ProfileDeleteButton } from './profile-delete-button';
+import { ImportProfileDialog } from './import-profile-dialog';
 import { PlusCircle } from 'lucide-react';
 
 export default function ProfileList() {
@@ -52,6 +53,9 @@ export default function ProfileList() {
         profile={selectedProfile as ProfileWithRelations}
       />
 
+      <div className='mb-4 flex justify-end'>
+        <ImportProfileDialog />
+      </div>
       <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
         <Card
           onClick={handleCreateClick}
