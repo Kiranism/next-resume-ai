@@ -55,7 +55,6 @@
     "hono": "^4.6.19",
     "html2canvas": "^1.4.1",
     "jstack": "^1.0.1",
-    "kbar": "^0.1.0-beta.45",
     "lucide-react": "^0.468.0",
     "motion": "^11.17.0",
     "nanoid": "^3.3.6",
