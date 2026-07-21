@@ -130,7 +130,7 @@ export default async function ResumePage({
               >
                 <Card className='hover:border-primary relative h-[300px] overflow-hidden p-0 transition-all hover:shadow-md'>
                   <Image
-                    src={resume.previewImageUrl || '/templates/default.png'}
+                    src={`/templates/${resume.templateId ?? 'template-one'}.png`}
                     alt={resume.jdJobTitle}
                     fill
                     sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw'

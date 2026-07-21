@@ -48,20 +48,22 @@ export const useGetResumes = (profileId?: string) => {
   });
 };
 
-export const useUploadPreviewImage = () => {
+// Persist which template a resume uses. The dashboard cover is derived from
+// this (/templates/<templateId>.png), so refresh the resumes list on success.
+export const useApplyResumeTemplate = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({
-      resumeId,
-      image
+      id,
+      templateId
     }: {
-      resumeId: string;
-      image: string;
+      id: string;
+      templateId: string;
     }) => {
-      const response = await client.resume.uploadPreviewImage.$post({
-        resumeId,
-        image
+      const response = await client.resume.updateResume.$post({
+        id,
+        templateId
       });
       return response.json();
     },

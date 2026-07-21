@@ -3,13 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { type TResumeEditFormValues } from '@/features/resume/utils/form-schema';
-import { useUpdateResume, useUploadPreviewImage } from '../api';
-import { capturePreviewBase64 } from '../utils/capture-preview';
+import { useUpdateResume } from '../api';
 
 export type AutosaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 const DATA_DEBOUNCE_MS = 1000;
-const PREVIEW_DEBOUNCE_MS = 3000;
 
 // Background auto-save for the resume editor. Watches the form and persists
 // changes after a short debounce; manual edits and AI-driven edits (which go
@@ -25,28 +23,11 @@ export function useAutosaveResume(
   form: UseFormReturn<TResumeEditFormValues, any, undefined>
 ) {
   const { mutateAsync: updateResume } = useUpdateResume();
-  const { mutateAsync: uploadPreviewImage } = useUploadPreviewImage();
 
   const [state, setState] = useState<AutosaveState>('idle');
 
   const lastSavedRef = useRef<string | null>(null);
   const dataTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const schedulePreview = useCallback(
-    (resumeId: string) => {
-      if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
-      previewTimerRef.current = setTimeout(async () => {
-        const image = await capturePreviewBase64();
-        if (image) {
-          uploadPreviewImage({ resumeId, image }).catch(() => {
-            // Thumbnail refresh is best-effort; data is already saved.
-          });
-        }
-      }, PREVIEW_DEBOUNCE_MS);
-    },
-    [uploadPreviewImage]
-  );
 
   // Writes the current form values (skips only if unchanged since last save).
   const persist = async () => {
@@ -61,7 +42,6 @@ export function useAutosaveResume(
       await updateResume({ id: values.resume_id, ...values });
       lastSavedRef.current = key;
       setState('saved');
-      schedulePreview(values.resume_id);
     } catch (error) {
       console.error('Autosave failed:', error);
       setState('error');
@@ -93,7 +73,6 @@ export function useAutosaveResume(
     return () => {
       subscription.unsubscribe();
       if (dataTimerRef.current) clearTimeout(dataTimerRef.current);
-      if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
     };
   }, [form]);
 

@@ -14,6 +14,7 @@ import { ResumeChat } from '@/features/resume/components/resume-chat';
 import { AutosaveIndicator } from '@/features/resume/components/autosave-indicator';
 import { TemplateSelection } from '@/features/resume/components/template-selection';
 import { useAutosaveResume } from '@/features/resume/hooks/use-autosave-resume';
+import { useApplyResumeTemplate } from '@/features/resume/api';
 import { useTemplateStore } from '@/features/resume/store/use-template-store';
 import {
   resumeEditFormSchema,
@@ -37,8 +38,20 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
     selectedTemplate,
     currentTemplate,
     setSelectedTemplate,
+    setCurrentTemplate,
     applyTemplate
   } = useTemplateStore();
+
+  const { mutate: persistTemplate } = useApplyResumeTemplate();
+
+  // Seed the template state from THIS resume's saved template so the preview and
+  // the "applied" marker reflect the resume being edited (not the last one).
+  useEffect(() => {
+    const saved = resume?.templateId ?? 'template-one';
+    setCurrentTemplate(saved);
+    setSelectedTemplate(saved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resume?.id]);
 
   useEffect(() => {
     if (mode === 'edit') {
@@ -84,6 +97,8 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
 
   const handleApplyTemplate = (templateId: string) => {
     applyTemplate(templateId);
+    // Persist the applied template so the dashboard cover reflects it.
+    persistTemplate({ id: resume.id, templateId });
     setMode('edit');
   };
 

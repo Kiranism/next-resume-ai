@@ -6,7 +6,6 @@ import { eq, desc, inArray, and, count } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { resumeFormSchema } from '@/features/resume/utils/form-schema';
 import { generateResumeContent } from '../services/ai-resume';
-import { uploadImageToStorage } from '../services/upload';
 
 export const resumeRouter = j.router({
   // Create a new resume
@@ -127,6 +126,7 @@ export const resumeRouter = j.router({
       z.object({
         id: z.string(),
         resume_id: z.string().optional(),
+        templateId: z.string().optional(),
         personal_details: z.record(z.string(), z.any()).nullish(),
         jobs: z.array(z.any()).optional(),
         educations: z.array(z.any()).optional(),
@@ -148,6 +148,7 @@ export const resumeRouter = j.router({
       const [updated] = await db
         .update(resumes)
         .set({
+          templateId: updateData.templateId,
           personalDetails: updateData.personal_details,
           jobs: updateData.jobs,
           education: updateData.educations,
@@ -203,50 +204,6 @@ export const resumeRouter = j.router({
 
     return c.json(allResumes);
   }),
-  // Upload a preview image for a resume
-  uploadPreviewImage: privateProcedure
-    .input(
-      z.object({
-        resumeId: z
-          .union([z.string(), z.number()])
-          .transform((val) => String(val)),
-        image: z.any() // Accept any for the blob data
-      })
-    )
-    .mutation(async ({ c, ctx, input }) => {
-      const { user } = ctx;
-      const { resumeId, image } = input;
-
-      try {
-        const existing = await db.query.resumes.findFirst({
-          where: and(
-            eq(resumes.id, String(resumeId)),
-            eq(resumes.userId, user.id)
-          )
-        });
-
-        if (!existing) {
-          return c.json({ error: 'Not found' }, 404);
-        }
-
-        const imageUrl = await uploadImageToStorage(image);
-        const [updated] = await db
-          .update(resumes)
-          .set({
-            previewImageUrl: imageUrl,
-            updatedAt: new Date()
-          })
-          .where(
-            and(eq(resumes.id, String(resumeId)), eq(resumes.userId, user.id))
-          )
-          .returning();
-
-        return c.json(updated);
-      } catch (error) {
-        console.error('Error in uploadPreviewImage:', error);
-        return c.json({ error: 'Failed to upload image' }, 500);
-      }
-    }),
 
   // Delete a resume (owner only)
   deleteResume: privateProcedure
@@ -295,7 +252,7 @@ export const resumeRouter = j.router({
           skills: source.skills,
           tools: source.tools,
           languages: source.languages,
-          previewImageUrl: source.previewImageUrl,
+          templateId: source.templateId,
           updatedAt: new Date()
         })
         .returning();

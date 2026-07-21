@@ -13,7 +13,9 @@ export const resumes = pgTable('resumes', {
   jdJobTitle: text('jd_job_title').notNull(),
   employer: text('employer').notNull(),
   jdPostDetails: text('jd_post_details').notNull(),
-  previewImageUrl: text('preview_image_url'),
+  // Which resume template is applied — the dashboard cover is derived from this
+  // (/templates/<templateId>.png). Matches ids in features/resume/templates/registry.
+  templateId: text('template_id').notNull().default('template-one'),
   personalDetails: jsonb('personal_details'),
   jobs: jsonb('jobs').array(),
   education: jsonb('education').array(),
