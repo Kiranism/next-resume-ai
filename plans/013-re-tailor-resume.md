@@ -63,9 +63,11 @@ export default function CreateResumeContent({
   );
 ```
 
-Then, immediately BEFORE the existing `const { steps, currentStepIndex, ... } = useMultistepForm(...)`
-line, add an early return that skips the profile-selection step when a profile is
-preselected:
+The `useMultistepForm(...)` hook MUST be called **unconditionally** (React
+rules-of-hooks — a conditional hook call is an ESLint error and fails `pnpm lint`).
+So place the early return **AFTER** the existing
+`const { steps, currentStepIndex, step, isFirstStep, isLastStep, back, next } = useMultistepForm([...]);`
+block (right after its closing `]);`) and BEFORE the `return (` statement:
 ```tsx
   if (initialProfileId) {
     return (

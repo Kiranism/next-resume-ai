@@ -28,9 +28,9 @@ vision; plans are written one slice at a time on request.
 (001 superseded). Backlog now being implemented (010–014). `main` untouched.**
 
 | 010 | Remove dead starter scaffolding + unused deps | P2 | M | — | DONE (`5f76235`) — reviewed & integrated; -4122 LOC, tsc/lint 0 |
-| 011 | Profile deletion (cascade) | P2 | S | 004 | IN PROGRESS |
-| 012 | ATS-safe single-column template | P2 | M | — | IN PROGRESS |
-| 013 | Re-tailor a resume for a new JD | P2 | S | 007 | IN PROGRESS |
+| 011 | Profile deletion (cascade) | P2 | S | 004 | DONE (`e3a3210`) — reviewed & integrated; tsc/lint 0 |
+| 012 | ATS-safe single-column template | P2 | M | — | DONE (`11a587d`) — reviewed & integrated; tsc/lint 0 |
+| 013 | Re-tailor a resume for a new JD | P2 | S | 007 | IN PROGRESS (re-dispatched; plan fixed for rules-of-hooks) |
 | 014 | Import → profile (paste text → AI parse) [D2] | P1 | L | 005, 011 | TODO (after 011) |
 
 Direction picks (from `/improve next`) being built: **D3** (007, trustworthy
