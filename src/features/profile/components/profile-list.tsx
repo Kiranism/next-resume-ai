@@ -8,7 +8,6 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ProfileWithRelations } from '@/server/routers/profile-router';
 import { useRouter } from 'next/navigation';
 import { useProfiles } from '../api';
 import { ProfileDeleteButton } from './profile-delete-button';

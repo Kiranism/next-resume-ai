@@ -32,7 +32,10 @@ export const profileRouter = j.router({
             email: parsed.email || 'unknown@example.com',
             contactno: parsed.contactno || '',
             country: parsed.country || '',
-            city: parsed.city || ''
+            city: parsed.city || '',
+            linkedin: parsed.linkedin || null,
+            github: parsed.github || null,
+            website: parsed.website || null
           })
           .returning();
 
@@ -123,7 +126,10 @@ export const profileRouter = j.router({
             email: input.email,
             contactno: input.contactno,
             country: input.country,
-            city: input.city
+            city: input.city,
+            linkedin: input.linkedin || null,
+            github: input.github || null,
+            website: input.website || null
           })
           .returning();
 
@@ -196,6 +202,9 @@ export const profileRouter = j.router({
             contactno: inputData.contactno,
             country: inputData.country,
             city: inputData.city,
+            linkedin: inputData.linkedin || null,
+            github: inputData.github || null,
+            website: inputData.website || null,
             updatedAt: new Date()
           })
           .where(and(eq(profiles.id, id), eq(profiles.userId, user.id)))

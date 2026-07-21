@@ -92,7 +92,10 @@ export const resumeEditFormSchema = z.object({
         .string()
         .min(3, { message: 'Please enter a summary' })
         .optional()
-        .nullable()
+        .nullable(),
+      linkedin: z.string().optional().nullable(),
+      github: z.string().optional().nullable(),
+      website: z.string().optional().nullable()
     })
     .optional(),
   jobs: z.array(jobSchema).optional(),

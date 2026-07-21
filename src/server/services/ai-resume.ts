@@ -171,6 +171,9 @@ export async function generateResumeContent(
         phone: profile.contactno,
         country: profile.country,
         city: profile.city,
+        linkedin: profile.linkedin ?? '',
+        github: profile.github ?? '',
+        website: profile.website ?? '',
         summary: content.personal_details?.summary || ''
       },
       jobs: content.jobs,

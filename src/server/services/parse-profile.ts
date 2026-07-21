@@ -7,6 +7,9 @@ export type ParsedProfile = {
   contactno: string;
   country: string;
   city: string;
+  linkedin: string;
+  github: string;
+  website: string;
   jobs: {
     jobTitle: string;
     employer: string;
@@ -39,6 +42,7 @@ ${text}
 Return JSON with EXACTLY this shape. Use an empty string "" for anything not found. Format all dates as YYYY-MM-DD (use "" if unknown):
 {
   "firstname": "", "lastname": "", "email": "", "contactno": "", "country": "", "city": "",
+  "linkedin": "", "github": "", "website": "",
   "jobs": [{ "jobTitle": "", "employer": "", "description": "", "startDate": "", "endDate": "", "city": "" }],
   "educations": [{ "school": "", "degree": "", "field": "", "description": "", "startDate": "", "endDate": "", "city": "" }]
 }`;
@@ -60,6 +64,9 @@ Return JSON with EXACTLY this shape. Use an empty string "" for anything not fou
     contactno: str(p.contactno),
     country: str(p.country),
     city: str(p.city),
+    linkedin: str(p.linkedin),
+    github: str(p.github),
+    website: str(p.website),
     jobs: jobsIn.map((j) => ({
       jobTitle: str(j.jobTitle),
       employer: str(j.employer),

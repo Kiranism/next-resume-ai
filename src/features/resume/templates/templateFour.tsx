@@ -49,7 +49,10 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
   const contact = [
     pd?.phone,
     pd?.email,
-    [pd?.city, pd?.country].filter(Boolean).join(', ')
+    [pd?.city, pd?.country].filter(Boolean).join(', '),
+    pd?.linkedin,
+    pd?.github,
+    pd?.website
   ]
     .filter(Boolean)
     .join('   ·   ');

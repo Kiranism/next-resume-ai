@@ -37,6 +37,9 @@ const transformProfileToFormValues = (
       contactno: '',
       country: '',
       city: '',
+      linkedin: '',
+      github: '',
+      website: '',
       jobs: [],
       educations: []
     };
@@ -49,6 +52,9 @@ const transformProfileToFormValues = (
     contactno: profile.contactno,
     country: profile.country,
     city: profile.city,
+    linkedin: profile.linkedin || '',
+    github: profile.github || '',
+    website: profile.website || '',
     jobs: profile.jobs.map((job) => ({
       jobTitle: job.jobTitle || '',
       employer: job.employer || '',
@@ -328,6 +334,60 @@ export default function CreateProfileForm({ profile }: CreateProfileFormProps) {
                   <FormLabel>City</FormLabel>
                   <FormControl>
                     <Input placeholder='Enter city' {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='linkedin'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>LinkedIn (optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='linkedin.com/in/you'
+                      {...field}
+                      value={field.value ?? ''}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='github'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>GitHub (optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='github.com/you'
+                      {...field}
+                      value={field.value ?? ''}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='website'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Portfolio / Website (optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='yoursite.com'
+                      {...field}
+                      value={field.value ?? ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -20,7 +20,10 @@ export default function ResumeTemplateFive({ formData }: TResumeTemplateProps) {
   const contactLine = [
     pd?.email,
     pd?.phone,
-    [pd?.city, pd?.country].filter(Boolean).join(', ')
+    [pd?.city, pd?.country].filter(Boolean).join(', '),
+    pd?.linkedin,
+    pd?.github,
+    pd?.website
   ]
     .filter(Boolean)
     .join('  |  ');

@@ -78,6 +78,48 @@ export function PersonalDetails({ control }: PersonalDetailsProps) {
 
         <FormField
           control={control}
+          name='personal_details.linkedin'
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>LinkedIn</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ''} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={control}
+          name='personal_details.github'
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>GitHub</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ''} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={control}
+          name='personal_details.website'
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Portfolio / Website</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ''} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={control}
           name='personal_details.country'
           render={({ field }) => (
             <FormItem>

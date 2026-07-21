@@ -67,6 +67,17 @@ export default function ResumeTemplateThree({
                 {pd?.country}
               </Text>
             ) : null}
+            {pd?.linkedin ? (
+              <Text style={tw('text-xs text-muted')}>
+                {'·  ' + pd.linkedin}
+              </Text>
+            ) : null}
+            {pd?.github ? (
+              <Text style={tw('text-xs text-muted')}>{'·  ' + pd.github}</Text>
+            ) : null}
+            {pd?.website ? (
+              <Text style={tw('text-xs text-muted')}>{'·  ' + pd.website}</Text>
+            ) : null}
           </View>
         </View>
 

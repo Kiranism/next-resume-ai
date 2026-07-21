@@ -71,6 +71,15 @@ export default function ResumeTemplate({ formData }: TResumeTemplateProps) {
                 {pd?.country}
               </Text>
             ) : null}
+            {pd?.linkedin ? (
+              <Text style={tw('text-xs text-[#cbd5e1]')}>{pd.linkedin}</Text>
+            ) : null}
+            {pd?.github ? (
+              <Text style={tw('text-xs text-[#cbd5e1]')}>{pd.github}</Text>
+            ) : null}
+            {pd?.website ? (
+              <Text style={tw('text-xs text-[#cbd5e1]')}>{pd.website}</Text>
+            ) : null}
           </View>
 
           {skills.length > 0 ? (
