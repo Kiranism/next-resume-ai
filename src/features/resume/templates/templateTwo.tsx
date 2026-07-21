@@ -23,15 +23,19 @@ type Item = {
   name: string;
 };
 
+// "2021-01-01 – 2023-05-01", "2021-01-01 – Present", or a single date.
+const dateRange = (start?: string, end?: string) => {
+  if (start && !end) return `${start} – Present`;
+  if (start && end) return `${start} – ${end}`;
+  return start || end || '';
+};
+
 const BulletedList = ({ items }: { items: Item[] }) => (
-  <View style={tw('flex flex-col gap-1.5')}>
+  <View style={tw('flex flex-col gap-1')}>
     {items.map((item, index) => (
-      <View
-        style={tw('flex flex-row flex-wrap items-center gap-1.5')}
-        key={index}
-      >
-        <Text style={tw('text-accent text-xs')}>•</Text>
-        <Text style={tw('text-sm')}>{item.name}</Text>
+      <View style={tw('flex flex-row items-baseline gap-1.5')} key={index}>
+        <Text style={tw('text-accent text-[9px]')}>•</Text>
+        <Text style={tw('text-[10px] leading-snug')}>{item.name}</Text>
       </View>
     ))}
   </View>
@@ -87,11 +91,11 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
 
         {/* Summary */}
         {!hidden.includes('summary') && pd?.summary ? (
-          <View style={tw('mb-6')}>
+          <View style={tw('mb-5')}>
             <Text style={tw('text-lg font-bold text-primary mb-2')}>
               Professional Summary
             </Text>
-            <Text style={tw('text-sm leading-relaxed')}>{pd.summary}</Text>
+            <Text style={tw('text-[10px] leading-relaxed')}>{pd.summary}</Text>
           </View>
         ) : null}
 
@@ -100,24 +104,24 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
           {/* Left */}
           <View style={tw('w-2/3 pr-5')}>
             {!hidden.includes('experience') && jobs.length > 0 ? (
-              <View style={tw('mb-6')}>
-                <Text style={tw('text-lg font-bold text-primary mb-2')}>
+              <View style={tw('mb-5')}>
+                <Text style={tw('text-[13px] font-bold text-primary mb-1.5')}>
                   Work Experience
                 </Text>
                 <View>
                   {jobs.map((job, index) => (
                     <View wrap={false} key={index} style={tw('mb-3')}>
-                      <Text style={tw('text-base font-bold text-primary')}>
+                      <Text style={tw('text-[12px] font-bold text-primary')}>
                         {job?.jobTitle ?? ''}
                       </Text>
-                      <Text style={tw('text-xs text-muted mt-0.5')}>
+                      <Text style={tw('text-[9px] text-muted mt-0.5')}>
                         {job?.employer ?? ''}
                         {job?.startDate || job?.endDate
-                          ? `  ·  ${job?.startDate ?? ''} – ${job?.endDate ?? ''}`
+                          ? `   ·   ${dateRange(job?.startDate, job?.endDate)}`
                           : ''}
                       </Text>
                       {job?.description ? (
-                        <Text style={tw('text-sm mt-1 leading-relaxed')}>
+                        <Text style={tw('text-[10px] mt-1 leading-relaxed')}>
                           {job.description}
                         </Text>
                       ) : null}
@@ -128,14 +132,14 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
             ) : null}
 
             {!hidden.includes('projects') && projects.length > 0 ? (
-              <View style={tw('mb-6')}>
-                <Text style={tw('text-lg font-bold text-primary mb-2')}>
+              <View style={tw('mb-5')}>
+                <Text style={tw('text-[13px] font-bold text-primary mb-1.5')}>
                   Projects
                 </Text>
                 <View>
                   {projects.map((proj, index) => (
                     <View wrap={false} key={index} style={tw('mb-3')}>
-                      <Text style={tw('text-base font-bold text-primary')}>
+                      <Text style={tw('text-[12px] font-bold text-primary')}>
                         {proj?.name ?? ''}
                       </Text>
                       {proj?.link ? (
@@ -144,7 +148,7 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
                         </Text>
                       ) : null}
                       {proj?.description ? (
-                        <Text style={tw('text-sm mt-1 leading-relaxed')}>
+                        <Text style={tw('text-[10px] mt-1 leading-relaxed')}>
                           {proj.description}
                         </Text>
                       ) : null}
@@ -155,25 +159,25 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
             ) : null}
 
             {!hidden.includes('education') && educations.length > 0 ? (
-              <View style={tw('mb-6')}>
-                <Text style={tw('text-lg font-bold text-primary mb-2')}>
+              <View style={tw('mb-5')}>
+                <Text style={tw('text-[13px] font-bold text-primary mb-1.5')}>
                   Education
                 </Text>
                 <View>
                   {educations.map((edu, index) => (
                     <View key={index} wrap={false} style={tw('mb-3')}>
-                      <Text style={tw('text-base font-bold text-primary')}>
+                      <Text style={tw('text-[12px] font-bold text-primary')}>
                         {edu?.degree ?? ''}
                         {edu?.field ? ` in ${edu.field}` : ''}
                       </Text>
-                      <Text style={tw('text-xs text-muted mt-0.5')}>
+                      <Text style={tw('text-[9px] text-muted mt-0.5')}>
                         {edu?.school ?? ''}
                         {edu?.startDate || edu?.endDate
-                          ? `  ·  ${edu?.startDate ?? ''} – ${edu?.endDate ?? ''}`
+                          ? `   ·   ${dateRange(edu?.startDate, edu?.endDate)}`
                           : ''}
                       </Text>
                       {edu?.description ? (
-                        <Text style={tw('text-sm mt-1 leading-relaxed')}>
+                        <Text style={tw('text-[10px] mt-1 leading-relaxed')}>
                           {edu.description}
                         </Text>
                       ) : null}
@@ -187,8 +191,8 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
           {/* Right */}
           <View style={tw('w-1/3 pl-5 border-l border-[#e5e7eb]')}>
             {!hidden.includes('skills') && skills.length > 0 ? (
-              <View style={tw('mb-6')}>
-                <Text style={tw('text-lg font-bold text-primary mb-2')}>
+              <View style={tw('mb-5')}>
+                <Text style={tw('text-[13px] font-bold text-primary mb-1.5')}>
                   Skills
                 </Text>
                 <BulletedList
@@ -197,8 +201,8 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
               </View>
             ) : null}
             {!hidden.includes('tools') && tools.length > 0 ? (
-              <View style={tw('mb-6')}>
-                <Text style={tw('text-lg font-bold text-primary mb-2')}>
+              <View style={tw('mb-5')}>
+                <Text style={tw('text-[13px] font-bold text-primary mb-1.5')}>
                   Tools
                 </Text>
                 <BulletedList
@@ -207,8 +211,8 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
               </View>
             ) : null}
             {!hidden.includes('languages') && languages.length > 0 ? (
-              <View style={tw('mb-6')}>
-                <Text style={tw('text-lg font-bold text-primary mb-2')}>
+              <View style={tw('mb-5')}>
+                <Text style={tw('text-[13px] font-bold text-primary mb-1.5')}>
                   Languages
                 </Text>
                 <BulletedList

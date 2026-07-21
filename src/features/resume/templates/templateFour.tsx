@@ -30,10 +30,19 @@ const SectionTitle = ({ children }: { children: ReactNode }) => (
 
 const BulletPoint = ({ text }: { text: string }) => (
   <View style={tw('flex flex-row items-start gap-2')}>
-    <Text style={tw('text-accent text-xs')}>•</Text>
-    <Text style={tw('text-sm flex-1 leading-relaxed')}>{text}</Text>
+    <Text style={tw('text-accent text-[9px]')}>•</Text>
+    <Text style={tw('text-[10px] flex-1 leading-relaxed text-secondary')}>
+      {text}
+    </Text>
   </View>
 );
+
+// "2021-01-01 – 2023-05-01", "2021-01-01 – Present", or a single date.
+const dateRange = (start?: string, end?: string) => {
+  if (start && !end) return `${start} – Present`;
+  if (start && end) return `${start} – ${end}`;
+  return start || end || '';
+};
 
 export default function TemplateFour({ formData }: TResumeTemplateProps) {
   const pd = formData?.personal_details;
@@ -49,34 +58,48 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
   const projects = formData?.projects ?? [];
   const hidden = formData?.hiddenSections ?? [];
 
-  const contact = [
+  const contactItems = [
     pd?.phone,
     pd?.email,
     [pd?.city, pd?.country].filter(Boolean).join(', '),
     pd?.linkedin,
     pd?.github,
     pd?.website
-  ]
-    .filter(Boolean)
-    .join('   ·   ');
+  ].filter(Boolean) as string[];
 
   return (
     <Document>
-      <Page size='A4' style={tw('p-10')}>
+      <Page size='A4' style={tw('px-12 py-10')}>
         {/* Header */}
-        <View style={tw('mb-6 text-center')}>
-          <Text style={tw('text-3xl font-bold leading-none')}>
+        <View style={tw('mb-5 text-center')}>
+          <Text style={tw('text-[26px] font-bold text-primary leading-none')}>
             {pd?.fname ?? ''} {pd?.lname ?? ''}
           </Text>
-          {contact ? (
-            <Text style={tw('text-xs text-muted mt-2')}>{contact}</Text>
+          {pd?.resume_job_title ? (
+            <Text style={tw('text-[11px] text-secondary mt-1.5')}>
+              {pd.resume_job_title}
+            </Text>
+          ) : null}
+          {contactItems.length > 0 ? (
+            <View
+              style={tw(
+                'flex flex-row flex-wrap justify-center gap-x-2 gap-y-1 mt-1.5'
+              )}
+            >
+              {contactItems.map((item, i) => (
+                <Text key={i} style={tw('text-[9px] text-muted')}>
+                  {i > 0 ? '·  ' : ''}
+                  {item}
+                </Text>
+              ))}
+            </View>
           ) : null}
         </View>
 
         {!hidden.includes('skills') && skills.length > 0 ? (
           <View style={tw('mb-5')}>
             <SectionTitle>Technical Skills</SectionTitle>
-            <Text style={tw('text-sm leading-relaxed')}>
+            <Text style={tw('text-[10px] leading-relaxed text-secondary')}>
               {skills.join(', ')}
             </Text>
           </View>
@@ -88,19 +111,19 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
             <View>
               {jobs.map((job, index) => (
                 <View key={index} wrap={false} style={tw('mb-3')}>
-                  <View
-                    style={tw('flex flex-row justify-between items-baseline')}
-                  >
-                    <Text style={tw('text-sm font-bold text-primary')}>
+                  <View style={tw('flex flex-row items-baseline gap-3')}>
+                    <Text
+                      style={tw('flex-1 text-[11px] font-bold text-primary')}
+                    >
                       {job?.employer ?? ''}
                     </Text>
                     {job?.startDate || job?.endDate ? (
-                      <Text style={tw('text-xs text-muted')}>
-                        {job?.startDate ?? ''} – {job?.endDate ?? ''}
+                      <Text style={tw('shrink-0 text-[9px] text-muted')}>
+                        {dateRange(job?.startDate, job?.endDate)}
                       </Text>
                     ) : null}
                   </View>
-                  <Text style={tw('text-sm font-bold text-secondary')}>
+                  <Text style={tw('text-[10px] font-medium text-secondary')}>
                     {job?.jobTitle ?? ''}
                   </Text>
                   {job?.description ? (
@@ -120,14 +143,16 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
             <View>
               {projects.map((proj, index) => (
                 <View key={index} wrap={false} style={tw('mb-3')}>
-                  <View
-                    style={tw('flex flex-row justify-between items-baseline')}
-                  >
-                    <Text style={tw('text-sm font-bold text-primary')}>
+                  <View style={tw('flex flex-row items-baseline gap-3')}>
+                    <Text
+                      style={tw('flex-1 text-[11px] font-bold text-primary')}
+                    >
                       {proj?.name ?? ''}
                     </Text>
                     {proj?.link ? (
-                      <Text style={tw('text-xs text-muted')}>{proj.link}</Text>
+                      <Text style={tw('shrink-0 text-[9px] text-muted')}>
+                        {proj.link}
+                      </Text>
                     ) : null}
                   </View>
                   {proj?.description ? (
@@ -144,7 +169,7 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
         {!hidden.includes('tools') && tools.length > 0 ? (
           <View style={tw('mb-5')}>
             <SectionTitle>Tools</SectionTitle>
-            <Text style={tw('text-sm leading-relaxed')}>
+            <Text style={tw('text-[10px] leading-relaxed text-secondary')}>
               {tools.join(', ')}
             </Text>
           </View>
@@ -156,21 +181,23 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
             <View>
               {educations.map((edu, index) => (
                 <View key={index} wrap={false} style={tw('mb-2')}>
-                  <View
-                    style={tw('flex flex-row justify-between items-baseline')}
-                  >
-                    <Text style={tw('text-sm font-bold text-primary')}>
+                  <View style={tw('flex flex-row items-baseline gap-3')}>
+                    <Text
+                      style={tw('flex-1 text-[11px] font-bold text-primary')}
+                    >
                       {edu?.degree ?? ''}
                       {edu?.field ? ` in ${edu.field}` : ''}
                     </Text>
                     {edu?.startDate || edu?.endDate ? (
-                      <Text style={tw('text-xs text-muted')}>
-                        {edu?.startDate ?? ''} – {edu?.endDate ?? ''}
+                      <Text style={tw('shrink-0 text-[9px] text-muted')}>
+                        {dateRange(edu?.startDate, edu?.endDate)}
                       </Text>
                     ) : null}
                   </View>
                   {edu?.school ? (
-                    <Text style={tw('text-xs text-muted')}>{edu.school}</Text>
+                    <Text style={tw('text-[9px] text-muted mt-0.5')}>
+                      {edu.school}
+                    </Text>
                   ) : null}
                 </View>
               ))}
@@ -181,7 +208,7 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
         {!hidden.includes('languages') && languages.length > 0 ? (
           <View style={tw('mb-5')}>
             <SectionTitle>Languages</SectionTitle>
-            <Text style={tw('text-sm leading-relaxed')}>
+            <Text style={tw('text-[10px] leading-relaxed text-secondary')}>
               {languages.join(', ')}
             </Text>
           </View>
