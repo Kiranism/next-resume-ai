@@ -5,7 +5,7 @@ import {
 import { generateJsonContent } from './ai-model';
 import { ATS_WRITING_GUIDELINES } from './resume-guidance';
 import { resumeEditFormSchema } from '@/features/resume/utils/form-schema';
-import { ZodObject } from 'zod';
+import { z, ZodObject } from 'zod';
 import { Profile } from '@/server/db/schema/profiles';
 import { ProfileWithRelations } from '../routers/profile-router';
 
@@ -33,6 +33,55 @@ function getSchemaStructure(schema: ZodObject<any>) {
     2
   );
 }
+
+// Lenient item schemas: accept a plain string OR an object and normalize to the
+// expected { <name>, proficiency_level } shape; never throw (per-item .catch).
+const skillItem = z
+  .preprocess(
+    (v) => (typeof v === 'string' ? { skill_name: v } : v),
+    z.object({
+      skill_name: z.string().catch(''),
+      proficiency_level: z.string().catch('')
+    })
+  )
+  .catch({ skill_name: '', proficiency_level: '' });
+
+const toolItem = z
+  .preprocess(
+    (v) => (typeof v === 'string' ? { tool_name: v } : v),
+    z.object({
+      tool_name: z.string().catch(''),
+      proficiency_level: z.string().catch('')
+    })
+  )
+  .catch({ tool_name: '', proficiency_level: '' });
+
+const languageItem = z
+  .preprocess(
+    (v) => (typeof v === 'string' ? { lang_name: v } : v),
+    z.object({
+      lang_name: z.string().catch(''),
+      proficiency_level: z.string().catch('')
+    })
+  )
+  .catch({ lang_name: '', proficiency_level: '' });
+
+// Validates the model's JSON. Every field .catch()es to a safe default, so a
+// non-array (or otherwise malformed) field becomes [] / {} instead of crashing.
+const aiResumeSchema = z.object({
+  personal_details: z
+    .object({
+      resume_job_title: z.string().catch(''),
+      summary: z.string().catch('')
+    })
+    .partial()
+    .catch({}),
+  jobs: z.array(z.any()).catch([]),
+  educations: z.array(z.any()).catch([]),
+  skills: z.array(skillItem).catch([]),
+  tools: z.array(toolItem).catch([]),
+  languages: z.array(languageItem).catch([])
+});
 
 export async function generateResumeContent(
   input: {
@@ -114,9 +163,13 @@ export async function generateResumeContent(
   try {
     const responseText = await generateJsonContent(prompt);
 
-    const content = JSON.parse(responseText) as TResumeEditFormValues;
+    // Validate + normalize the model's JSON with zod so a malformed field
+    // (e.g. a non-array skills value) can never crash the DB insert.
+    const parsedResult = aiResumeSchema.safeParse(JSON.parse(responseText));
+    const content = parsedResult.success
+      ? parsedResult.data
+      : aiResumeSchema.parse({});
 
-    // Validate and ensure all required sections exist
     return {
       personal_details: {
         resume_job_title:
@@ -129,11 +182,11 @@ export async function generateResumeContent(
         city: profile.city,
         summary: content.personal_details?.summary || ''
       },
-      jobs: content.jobs || [],
-      educations: content.educations || [],
-      skills: content.skills || [],
-      tools: content.tools || [],
-      languages: content.languages || []
+      jobs: content.jobs,
+      educations: content.educations,
+      skills: content.skills,
+      tools: content.tools,
+      languages: content.languages
     };
   } catch (error) {
     console.error('Error generating resume content:', error);
