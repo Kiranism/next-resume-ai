@@ -21,8 +21,8 @@ vision; plans are written one slice at a time on request.
 | 005  | Stateless per-request AI generation (fix shared Gemini session) | P1 | S | — | DONE (`1f77768`) — reviewed & integrated; tsc 0 |
 | 006  | DX: fix ESLint v8/v9 conflict + add `typecheck` script | P1 | S | — | DONE (`efba691`) — reviewed & integrated; `pnpm lint` now exits 0 |
 | 007  | Trustworthy generation (no orphan rows + quota enforcement) [D3] | P1 | M | 004, 005 | DONE (`924950b`) — reviewed & integrated; tsc/lint 0 |
-| 008  | ATS score + keyword-gap report [D1] | P1 | L | 005 | IN PROGRESS (executor dispatched) |
-| 009  | Resume lifecycle: delete / duplicate / re-tailor [D4] | P1 | M | 004 | TODO (queued after 008) |
+| 008  | ATS score + keyword-gap report [D1] | P1 | L | 005 | DONE (`bff9848`) — reviewed & integrated; tsc/lint 0 |
+| 009  | Resume lifecycle: delete / duplicate [D4] | P1 | M | 004, 008 | IN PROGRESS (executor dispatched) |
 
 Direction picks (from `/improve next`) being built: **D3** (007, trustworthy
 generation), **D1** (ATS score + report — spike+build, queued), **D4** (resume
