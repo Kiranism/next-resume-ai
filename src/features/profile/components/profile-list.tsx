@@ -12,6 +12,7 @@ import { ProfileWithRelations } from '@/server/routers/profile-router';
 import { useState, useCallback } from 'react';
 import { useProfiles } from '../api';
 import CreateProfileModal from './create-profile-modal';
+import { ProfileDeleteButton } from './profile-delete-button';
 import { PlusCircle } from 'lucide-react';
 
 export default function ProfileList() {
@@ -73,10 +74,15 @@ export default function ProfileList() {
             }
           >
             <CardHeader>
-              <CardTitle>
-                {profile.firstname} {profile.lastname}
-              </CardTitle>
-              <CardDescription>{profile.email}</CardDescription>
+              <div className='flex items-start justify-between'>
+                <div>
+                  <CardTitle>
+                    {profile.firstname} {profile.lastname}
+                  </CardTitle>
+                  <CardDescription>{profile.email}</CardDescription>
+                </div>
+                <ProfileDeleteButton profileId={profile.id} />
+              </div>
             </CardHeader>
             <CardContent>
               <div className='space-y-2'>

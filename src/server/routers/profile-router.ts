@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { j, privateProcedure } from '../jstack';
 import { profileSchema } from '@/features/profile/utils/form-schema';
 import { db } from '../db';
-import { profiles } from '../db/schema';
+import { profiles, resumes } from '../db/schema';
 import { and, eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import {
@@ -171,6 +171,33 @@ export const profileRouter = j.router({
 
         return c.json(completeProfile);
       });
+    }),
+
+  deleteProfile: privateProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ c, ctx, input }) => {
+      const { user } = ctx;
+      const { id } = input;
+
+      const owned = await db.query.profiles.findFirst({
+        where: eq(profiles.id, id)
+      });
+      if (!owned || owned.userId !== user.id) {
+        return c.json({ error: 'Not found' }, 404);
+      }
+
+      // Delete dependents first (resumes + jobs have no FK cascade), then the
+      // profile itself. Wrapped in a transaction so it is all-or-nothing.
+      await db.transaction(async (tx) => {
+        await tx.delete(resumes).where(eq(resumes.profileId, id));
+        await tx.delete(jobs).where(eq(jobs.profileId, id));
+        await tx.delete(educations).where(eq(educations.profileId, id));
+        await tx
+          .delete(profiles)
+          .where(and(eq(profiles.id, id), eq(profiles.userId, user.id)));
+      });
+
+      return c.json({ id });
     })
 });
 

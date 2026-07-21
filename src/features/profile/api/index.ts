@@ -48,3 +48,16 @@ export const useUpdateProfile = () => {
     }
   });
 };
+
+export const useDeleteProfile = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await client.profile.deleteProfile.$post({ id });
+      return await response.json();
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+    }
+  });
+};
