@@ -2,8 +2,8 @@ import { SignIn } from '@clerk/nextjs';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Authentication | Sign In',
-  description: 'Sign In page for authentication.'
+  title: 'Sign In | CVTailor',
+  description: 'Sign in to CVTailor to build and manage your AI resumes.'
 };
 
 export default async function Page() {

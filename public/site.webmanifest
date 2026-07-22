@@ -1,7 +1,7 @@
 {
   "name": "CVTailor",
   "short_name": "CVTailor",
-  "description": "Modern resume builder with AI-powered content generation and multiple template designs",
+  "description": "CVTailor is a free, open-source AI resume builder. Import a PDF, tailor your resume to the job with AI, and export an ATS-friendly PDF in minutes.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

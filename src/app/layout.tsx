@@ -6,69 +6,55 @@ import { Orbitron, Share_Tech_Mono } from 'next/font/google';
 import NextTopLoader from 'nextjs-toploader';
 import './globals.css';
 import { ClerkProvider } from '@clerk/nextjs';
+import { siteConfig } from '@/config/site';
 
 export const metadata: Metadata = {
-  title: 'CVTailor',
-  description:
-    'Modern resume builder with AI-powered content generation and multiple template designs',
-  keywords: [
-    'resume builder',
-    'AI resume',
-    'job application',
-    'CV maker',
-    'professional resume',
-    'Next.js',
-    'React',
-    'PDF resume'
-  ],
-  authors: [
-    {
-      name: 'Kiran',
-      url: 'https://github.com/Kiranism'
-    }
-  ],
-  creator: 'Kiran',
-  publisher: 'Kiran',
+  metadataBase: new URL(siteConfig.url),
+  title: siteConfig.title,
+  description: siteConfig.description,
+  applicationName: siteConfig.name,
+  keywords: [...siteConfig.keywords],
+  authors: [{ name: siteConfig.author.name, url: siteConfig.author.url }],
+  creator: siteConfig.author.name,
+  publisher: siteConfig.author.name,
   robots: {
     index: true,
     follow: true,
     googleBot: {
       index: true,
-      follow: true
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1
     }
   },
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://next-resume-ai.vercel.app',
-    title: 'CVTailor',
-    description:
-      'Modern resume builder with AI-powered content generation and multiple template designs',
-    siteName: 'CVTailor',
+    url: siteConfig.url,
+    siteName: siteConfig.name,
+    title: siteConfig.title,
+    description: siteConfig.description,
     images: [
       {
-        url: '/og-image.png',
+        url: siteConfig.ogImage,
         width: 1200,
         height: 630,
-        alt: 'CVTailor'
+        alt: 'CVTailor, free AI resume builder'
       }
     ]
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CVTailor',
-    description:
-      'Modern resume builder with AI-powered content generation and multiple template designs',
-    images: ['/og-image.png']
+    title: siteConfig.title,
+    description: siteConfig.description,
+    images: [siteConfig.ogImage]
   },
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png'
+    icon: '/favicon.ico'
   },
   manifest: '/site.webmanifest',
   category: 'productivity',
-  applicationName: 'CVTailor',
   generator: 'Next.js'
 };
 
