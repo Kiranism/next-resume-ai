@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>CVTailor — Free AI Resume Builder</h1>
+  <h1>CVTailor: Free AI Resume Builder</h1>
   <p>Build an ATS-friendly resume in minutes. Import a PDF, let AI write and tailor each section to the job, preview the PDF live, and export a print-ready file. Open source and built with Next.js 15.</p>
 
   <p>
@@ -22,7 +22,7 @@ https://github.com/user-attachments/assets/7c9440fd-2083-4916-8ccb-f002c47d0234
 
 ## What is CVTailor?
 
-CVTailor is a free, open-source AI resume builder built with Next.js 15 and React 19. It turns your work history into a polished, ATS-friendly resume. Import an existing resume PDF or start from a saved profile, let AI draft and refine each section, preview the PDF live as you edit, and export a print-ready file in one click. Five professional templates are included, with a parser-safe ATS layout as the default.
+CVTailor is a free, open-source AI resume builder built with Next.js 15 and React 19. It turns your work history into an ATS-friendly resume. Import an existing resume PDF or start from a saved profile, let AI draft and refine each section, preview the PDF live as you edit, and export a print-ready file in one click. Five professional templates are included, with a parser-safe ATS layout as the default.
 
 ## Contents
 
