@@ -1,11 +1,9 @@
 import { auth } from '@clerk/nextjs/server';
-import { redirect } from 'next/navigation';
-import React from 'react';
+import { LandingPage } from '@/features/marketing/components/landing-page';
 
-export default async function page() {
+// Public marketing landing page. Authenticated users get a "dashboard" CTA;
+// everyone else gets "sign in / get started".
+export default async function Page() {
   const { userId } = await auth();
-  if (!userId) {
-    return redirect('/sign-in');
-  }
-  return redirect('/welcome');
+  return <LandingPage isAuthed={!!userId} />;
 }
