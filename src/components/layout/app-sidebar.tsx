@@ -47,7 +47,7 @@ import { Icons } from '../icons';
 export const company = {
   name: 'CVTailor',
   logo: Icons.resume,
-  plan: 'Work in Progress'
+  plan: 'AI résumé builder'
 };
 
 type UserInfoProps = ReturnType<typeof useUser>['user'];
