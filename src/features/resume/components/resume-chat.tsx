@@ -247,21 +247,24 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
       {/* Header */}
       <div className='flex items-center justify-between gap-2'>
         <div className='flex min-w-0 flex-col'>
-          <span className='text-sm font-medium'>Chat with your resume</span>
+          <span className='truncate text-sm font-medium'>
+            Chat with your resume
+          </span>
           <span className='text-muted-foreground truncate text-xs'>
             Edits apply and save automatically.
           </span>
         </div>
-        <div className='flex items-center gap-2'>
+        <div className='flex shrink-0 items-center gap-2'>
           <Button
             variant='outline'
             size='sm'
             onClick={handleAtsScore}
             disabled={busy}
+            aria-label='Analyze ATS'
             className='gap-2'
           >
             <IconSparkles data-icon='inline-start' />
-            Analyze ATS
+            <span className='hidden sm:inline'>Analyze ATS</span>
           </Button>
           {messages.length > 1 && (
             <Button
@@ -269,10 +272,11 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
               size='sm'
               onClick={handleClear}
               disabled={busy || isClearing}
+              aria-label='Clear chat'
               className='text-muted-foreground gap-2'
             >
               <IconTrash data-icon='inline-start' />
-              Clear
+              <span className='hidden sm:inline'>Clear</span>
             </Button>
           )}
         </div>
