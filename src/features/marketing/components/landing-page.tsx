@@ -4,7 +4,6 @@ import {
   IconBolt,
   IconCheck,
   IconEye,
-  IconFileText,
   IconFileUpload,
   IconLayoutGrid,
   IconMessageChatbot,
@@ -107,11 +106,27 @@ export function LandingPage({ isAuthed = false }: LandingPageProps) {
       {/* ---- Nav ---- */}
       <header className='border-border/60 bg-background/80 sticky top-0 z-40 border-b backdrop-blur'>
         <nav className='mx-auto flex h-16 max-w-6xl items-center justify-between px-4'>
-          <Link href='/' className='flex items-center gap-2 font-bold'>
-            <span className='bg-primary text-primary-foreground grid size-7 place-items-center'>
-              <IconFileText className='size-4' />
-            </span>
-            <span className='tracking-wide'>CVTailor</span>
+          <Link
+            href='/'
+            className='flex items-center'
+            aria-label='CVTailor home'
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src='/logo-on-light.png'
+              alt='CVTailor'
+              width={160}
+              height={27}
+              className='h-7 w-auto dark:hidden'
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src='/logo-on-dark.png'
+              alt='CVTailor'
+              width={160}
+              height={27}
+              className='hidden h-7 w-auto dark:block'
+            />
           </Link>
           <div className='text-muted-foreground hidden items-center gap-8 text-sm md:flex'>
             <a href='#features' className='hover:text-foreground transition'>
@@ -378,11 +393,23 @@ export function LandingPage({ isAuthed = false }: LandingPageProps) {
       {/* ---- Footer ---- */}
       <footer className='border-border/60 border-t'>
         <div className='text-muted-foreground mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 text-sm sm:flex-row'>
-          <div className='flex items-center gap-2 font-semibold'>
-            <span className='bg-primary text-primary-foreground grid size-6 place-items-center'>
-              <IconFileText className='size-3.5' />
-            </span>
-            CVTailor
+          <div className='flex items-center'>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src='/logo-on-light.png'
+              alt='CVTailor'
+              width={140}
+              height={23}
+              className='h-6 w-auto dark:hidden'
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src='/logo-on-dark.png'
+              alt='CVTailor'
+              width={140}
+              height={23}
+              className='hidden h-6 w-auto dark:block'
+            />
           </div>
           <p>Build ATS-ready résumés with AI.</p>
           <div className='flex items-center gap-6'>
