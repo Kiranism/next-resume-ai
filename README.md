@@ -3,13 +3,13 @@
   <p>Build an ATS-friendly resume in minutes. Import a PDF, let AI write and tailor each section to the job, preview the PDF live, and export a print-ready file. Open source and built with Next.js 15.</p>
 
   <p>
-    <a href="https://next-resume-ai.vercel.app"><img src="https://img.shields.io/badge/Live_Demo-000?logo=vercel&logoColor=white" alt="CVTailor live demo"></a>
+    <a href="https://dub.sh/cvtailor"><img src="https://img.shields.io/badge/Live_Demo-000?logo=vercel&logoColor=white" alt="CVTailor live demo"></a>
     <a href="LICENSE"><img src="https://img.shields.io/github/license/Kiranism/next-resume-ai" alt="MIT license"></a>
     <a href="https://github.com/Kiranism/next-resume-ai/stargazers"><img src="https://img.shields.io/github/stars/Kiranism/next-resume-ai?style=flat" alt="GitHub stars"></a>
     <img src="https://img.shields.io/badge/Next.js-15-000?logo=next.js&logoColor=white" alt="Next.js 15">
   </p>
 
-  <a href="https://next-resume-ai.vercel.app"><b>Live Demo</b></a>
+  <a href="https://dub.sh/cvtailor"><b>Live Demo</b></a>
   &nbsp;·&nbsp;
   <a href="https://github.com/Kiranism/next-resume-ai/issues">Report a Bug</a>
   &nbsp;·&nbsp;
@@ -37,15 +37,15 @@ CVTailor is a free, open-source AI resume builder built with Next.js 15 and Reac
 
 ## Features
 
-- 🤖 **AI writing** for summaries, experience bullets, skills, and more
-- 📄 **Resume import** from a PDF or pasted text, parsed into an editable profile
-- 🎯 **Job-tailored content:** paste a job description, company, and role, and the AI matches your resume to the posting
-- ✅ **ATS-friendly templates**, with a single-column, parser-safe layout as the default
-- 👁️ **Live PDF preview** in a split-pane editor that updates as you type
-- 👤 **Profiles** so you can reuse your details across multiple resumes
-- 💾 **Auto-save** while you edit
-- 📤 **One-click PDF export**
-- 🌓 **Dark and light mode**
+- **AI writing** for summaries, experience bullets, skills, and more
+- **Resume import** from a PDF or pasted text, parsed into an editable profile
+- **Job-tailored content:** paste a job description, company, and role, and the AI matches your resume to the posting
+- **ATS-friendly templates**, with a single-column, parser-safe layout as the default
+- **Live PDF preview** in a split-pane editor that updates as you type
+- **Profiles** so you can reuse your details across multiple resumes
+- **Auto-save** while you edit
+- **One-click PDF export**
+- **Dark and light mode**
 
 ## How it works
 
@@ -170,4 +170,4 @@ Contributions are welcome. Open an [issue](https://github.com/Kiranism/next-resu
 
 Released under the [MIT License](LICENSE).
 
-Cheers! 🥂
+Cheers!
