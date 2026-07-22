@@ -85,7 +85,9 @@ export default async function ResumePage({
                   <div className='bg-muted/10 group-hover:bg-primary/5 mb-4 rounded-full p-4'>
                     <PlusIcon className='text-muted-foreground group-hover:text-primary h-8 w-8' />
                   </div>
-                  <h3 className='text-lg font-semibold'>Create a new resume</h3>
+                  <h3 className='text-center text-lg font-semibold'>
+                    Create a new resume
+                  </h3>
                   <p className='text-muted-foreground mt-2 text-center text-sm'>
                     Start building from scratch
                   </p>

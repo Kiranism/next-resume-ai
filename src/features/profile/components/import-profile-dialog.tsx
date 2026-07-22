@@ -67,8 +67,19 @@ export function ImportProfileDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant='outline' />}>
-        Import resume
+      <DialogTrigger
+        render={
+          <button
+            type='button'
+            className='from-sidebar/60 to-sidebar hover:border-primary flex min-h-[180px] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed bg-gradient-to-br p-8 text-center transition-colors'
+          />
+        }
+      >
+        <Upload className='h-9 w-9' />
+        <span className='text-sm font-medium'>Import résumé</span>
+        <span className='text-muted-foreground text-xs'>
+          Upload a PDF and we&apos;ll fill it in
+        </span>
       </DialogTrigger>
       <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-xl'>
         <DialogHeader>
