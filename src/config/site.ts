@@ -6,7 +6,7 @@ export const siteConfig = {
   title: 'CVTailor: Free AI Resume Builder',
   description:
     'CVTailor is a free, open-source AI resume builder. Import a PDF, tailor your resume to the job with AI, and export an ATS-friendly PDF in minutes.',
-  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://next-resume-ai.vercel.app',
+  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://cvtailor.kiranism.dev',
   ogImage: '/og-image.png',
   author: {
     name: 'Kiran',
