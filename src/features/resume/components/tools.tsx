@@ -52,7 +52,10 @@ export const Tools = ({ control }: ToolsProps) => {
     >
       <div className='grid gap-4'>
         {fields.map((field, index) => (
-          <div key={field.id} className='flex items-end gap-4'>
+          <div
+            key={field.id}
+            className='flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4'
+          >
             <FormField
               control={control}
               name={`tools.${index}.tool_name`}

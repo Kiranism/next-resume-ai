@@ -120,26 +120,25 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
   };
 
   return (
-    <div className='h-full p-4'>
-      {/* Mode Toggle */}
-
-      <div className='block md:hidden'>
+    <div className='flex h-[100dvh] flex-col p-4'>
+      {/* Mode Toggle (mobile only; auto height) */}
+      <div className='md:hidden'>
         <ModeToggle mode={mode} onModeChange={setMode} isMobile={true} />
       </div>
 
       {/* Desktop Layout */}
-      <div className='hidden h-full md:block'>
+      <div className='hidden min-h-0 flex-1 md:block'>
         <ResizablePanelGroup
           direction='horizontal'
           className='h-full w-full rounded-lg border'
         >
           <ResizablePanel defaultSize={55}>
-            <div className='h-full w-full px-8 pt-4 pb-8'>
+            <div className='flex h-full w-full flex-col px-8 pt-4 pb-8'>
               <div className='hidden md:block'>
                 <ModeToggle mode={mode} onModeChange={setMode} />
               </div>
               {mode === 'chat' ? (
-                <div className='h-[calc(100vh-120px)]'>
+                <div className='min-h-0 flex-1'>
                   <ResumeChat
                     form={form}
                     resumeId={resume.id}
@@ -147,7 +146,7 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
                   />
                 </div>
               ) : (
-                <ScrollArea className='h-[calc(100vh-120px)] pr-10'>
+                <ScrollArea className='min-h-0 flex-1 pr-10'>
                   {renderContent()}
                 </ScrollArea>
               )}
@@ -167,30 +166,21 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
       </div>
 
       {/* Mobile Layout */}
-      <div className='block h-full md:hidden'>
-        <div className='h-full w-full rounded-lg border'>
-          <div className='h-full w-full p-4'>
-            {mode === 'chat' ? (
-              <div className='h-[calc(100vh-150px)]'>
-                <ResumeChat
-                  form={form}
-                  resumeId={resume.id}
-                  saveNow={saveNow}
-                />
-              </div>
-            ) : mode === 'preview' ? (
-              <div className='h-[calc(100vh-150px)]'>
-                <PdfRenderer
-                  formData={formData}
-                  templateId={selectedTemplate}
-                />
-              </div>
-            ) : (
-              <ScrollArea className='h-[calc(100vh-150px)]'>
-                {renderContent()}
-              </ScrollArea>
-            )}
-          </div>
+      <div className='min-h-0 flex-1 md:hidden'>
+        <div className='flex h-full w-full flex-col rounded-lg border p-4'>
+          {mode === 'chat' ? (
+            <div className='min-h-0 flex-1'>
+              <ResumeChat form={form} resumeId={resume.id} saveNow={saveNow} />
+            </div>
+          ) : mode === 'preview' ? (
+            <div className='min-h-0 flex-1'>
+              <PdfRenderer formData={formData} templateId={selectedTemplate} />
+            </div>
+          ) : (
+            <ScrollArea className='min-h-0 flex-1'>
+              {renderContent()}
+            </ScrollArea>
+          )}
         </div>
       </div>
     </div>

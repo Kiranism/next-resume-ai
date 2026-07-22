@@ -71,7 +71,7 @@ export function ImportProfileDialog() {
         render={
           <button
             type='button'
-            className='from-sidebar/60 to-sidebar hover:border-primary flex min-h-[180px] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed bg-gradient-to-br p-8 text-center transition-colors'
+            className='from-sidebar/60 to-sidebar hover:border-primary flex min-h-[180px] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed bg-gradient-to-br p-6 text-center transition-colors sm:p-8'
           />
         }
       >

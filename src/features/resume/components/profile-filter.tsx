@@ -29,7 +29,7 @@ export function ProfileFilter() {
   return (
     <div className='mb-6'>
       <Select value={profileId || 'all'} onValueChange={handleProfileChange}>
-        <SelectTrigger className='w-[280px]'>
+        <SelectTrigger className='w-full sm:w-[280px]'>
           {/* Base UI's SelectValue renders the raw value by default — map it
               back to the profile's name so the label shows when selected. */}
           <SelectValue placeholder='Filter by profile'>

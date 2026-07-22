@@ -30,7 +30,7 @@ export default function ProfileList() {
       {/* Build a profile by hand */}
       <Card
         onClick={() => router.push('/dashboard/profile/create')}
-        className='from-sidebar/60 to-sidebar hover:border-primary flex min-h-[180px] cursor-pointer flex-col items-center justify-center gap-2 border-2 border-dashed bg-gradient-to-br p-8 text-center'
+        className='from-sidebar/60 to-sidebar hover:border-primary flex min-h-[180px] cursor-pointer flex-col items-center justify-center gap-2 border-2 border-dashed bg-gradient-to-br p-6 text-center sm:p-8'
       >
         <PlusCircle className='h-9 w-9' />
         <span className='text-sm font-medium'>Create from scratch</span>
