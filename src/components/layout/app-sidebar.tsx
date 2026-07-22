@@ -197,9 +197,7 @@ export default function AppSidebar() {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => signOut({ redirectUrl: '/sign-in' })}
-                >
+                <DropdownMenuItem onClick={() => signOut({ redirectUrl: '/' })}>
                   <div className='flex w-full items-center'>Log out</div>
                 </DropdownMenuItem>
               </DropdownMenuContent>

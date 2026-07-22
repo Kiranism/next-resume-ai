@@ -113,7 +113,7 @@ export default async function RootLayout({
         <ClerkProvider
           signInUrl='/sign-in'
           signUpUrl='/sign-up'
-          afterSignOutUrl={'/sign-in'}
+          afterSignOutUrl={'/'}
         >
           <NuqsAdapter>
             <Providers>

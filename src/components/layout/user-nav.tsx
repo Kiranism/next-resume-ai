@@ -58,9 +58,7 @@ export function UserNav() {
             <DropdownMenuItem>New Team</DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => signOut({ redirectUrl: '/sign-in' })}
-          >
+          <DropdownMenuItem onClick={() => signOut({ redirectUrl: '/' })}>
             <div className='flex w-full items-center justify-between'>
               Log out
               <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
