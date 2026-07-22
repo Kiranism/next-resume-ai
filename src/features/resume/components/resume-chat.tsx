@@ -15,6 +15,7 @@ import { client } from '@/lib/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Bubble, BubbleContent } from '@/components/ui/bubble';
 import {
   Message,
@@ -36,8 +37,6 @@ import {
 } from '@/features/resume/utils/chat-types';
 import { streamChatEdit } from '../api/chat-stream';
 import { useClearResumeChat, useResumeChatMessages } from '../api';
-import { type AutosaveState } from '../hooks/use-autosave-resume';
-import { AutosaveIndicator } from './autosave-indicator';
 
 interface ResumeChatProps {
   form: UseFormReturn<TResumeEditFormValues, any, undefined>;
@@ -45,7 +44,6 @@ interface ResumeChatProps {
   // Persist immediately after an AI edit / undo (background auto-save lives in
   // the parent so manual edits and chat edits share one save path).
   saveNow: () => void;
-  autosaveState: AutosaveState;
 }
 
 const GREETING: ChatUiMessage = {
@@ -70,18 +68,14 @@ function createId() {
   }
 }
 
-export function ResumeChat({
-  form,
-  resumeId,
-  saveNow,
-  autosaveState
-}: ResumeChatProps) {
+export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
   const [messages, setMessages] = useState<ChatUiMessage[]>([GREETING]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const seededRef = useRef(false);
 
-  const { data: chatData } = useResumeChatMessages(resumeId);
+  const { data: chatData, isLoading: isLoadingHistory } =
+    useResumeChatMessages(resumeId);
   const { mutate: clearChat, isPending: isClearing } = useClearResumeChat();
 
   // Hydrate the saved thread from the DB once (server-owned history). Undo
@@ -259,7 +253,6 @@ export function ResumeChat({
           </span>
         </div>
         <div className='flex items-center gap-2'>
-          <AutosaveIndicator state={autosaveState} />
           <Button
             variant='outline'
             size='sm'
@@ -287,176 +280,203 @@ export function ResumeChat({
 
       {/* Conversation */}
       <div className='min-h-0 flex-1'>
-        <MessageScrollerProvider autoScroll>
-          <MessageScroller>
-            <MessageScrollerViewport>
-              <MessageScrollerContent className='py-2'>
-                {messages.map((message) => {
-                  const isLoading =
-                    message.role === 'assistant' &&
-                    ((message.streaming && !message.content) ||
-                      message.atsLoading);
+        {isLoadingHistory ? (
+          <div className='flex flex-col gap-5 px-1 py-4'>
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className={cn(
+                  'flex items-start gap-2',
+                  i % 2 === 1 && 'flex-row-reverse'
+                )}
+              >
+                {i % 2 === 0 && (
+                  <Skeleton className='size-8 shrink-0 rounded-full' />
+                )}
+                <div className='flex max-w-[75%] flex-col gap-2'>
+                  <Skeleton className='h-4 w-52' />
+                  <Skeleton className='h-4 w-40' />
+                  {i % 2 === 0 && <Skeleton className='h-4 w-28' />}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <MessageScrollerProvider autoScroll>
+            <MessageScroller>
+              <MessageScrollerViewport>
+                <MessageScrollerContent className='py-2'>
+                  {messages.map((message) => {
+                    const isLoading =
+                      message.role === 'assistant' &&
+                      ((message.streaming && !message.content) ||
+                        message.atsLoading);
 
-                  return (
-                    <MessageScrollerItem
-                      key={message.id}
-                      messageId={message.id}
-                      scrollAnchor={message.role === 'user'}
-                    >
-                      <Message
-                        align={message.role === 'user' ? 'end' : 'start'}
+                    return (
+                      <MessageScrollerItem
+                        key={message.id}
+                        messageId={message.id}
+                        scrollAnchor={message.role === 'user'}
                       >
-                        {message.role === 'assistant' && (
-                          <MessageAvatar className='size-8'>
-                            <IconSparkles className='text-primary size-4' />
-                          </MessageAvatar>
-                        )}
-                        <MessageContent>
-                          {isLoading ? (
-                            <span className='shimmer px-1 text-sm'>
-                              {message.atsLoading
-                                ? 'Analyzing ATS score…'
-                                : 'Thinking…'}
-                            </span>
-                          ) : (
-                            <Bubble
-                              align={message.role === 'user' ? 'end' : 'start'}
-                              variant={
-                                message.error
-                                  ? 'destructive'
-                                  : message.role === 'user'
-                                    ? 'default'
-                                    : 'muted'
-                              }
-                            >
-                              <BubbleContent>
-                                {message.content}
-                                {message.streaming &&
-                                  message.content &&
-                                  !message.applyingEdit && (
-                                    <span
-                                      aria-hidden
-                                      className='ml-0.5 inline-block animate-pulse'
-                                    >
-                                      ▍
-                                    </span>
-                                  )}
-                              </BubbleContent>
-                            </Bubble>
+                        <Message
+                          align={message.role === 'user' ? 'end' : 'start'}
+                        >
+                          {message.role === 'assistant' && (
+                            <MessageAvatar className='size-8'>
+                              <IconSparkles className='text-primary size-4' />
+                            </MessageAvatar>
                           )}
-
-                          {message.applyingEdit && (
-                            <span className='shimmer px-1 text-sm'>
-                              Applying changes…
-                            </span>
-                          )}
-
-                          {message.atsReport && (
-                            <div className='bg-muted/40 flex flex-col gap-3 rounded-lg border p-3 text-xs'>
-                              <div className='flex items-baseline gap-2'>
-                                <span className='text-foreground text-2xl font-bold'>
-                                  {message.atsReport.score}
-                                </span>
-                                <span className='text-muted-foreground'>
-                                  / 100 ATS match
-                                </span>
-                              </div>
-
-                              {message.atsReport.missingKeywords.length > 0 && (
-                                <div className='flex flex-col gap-1'>
-                                  <span className='text-foreground font-medium'>
-                                    Missing keywords
-                                  </span>
-                                  <div className='flex flex-wrap gap-1'>
-                                    {message.atsReport.missingKeywords
-                                      .slice(0, 12)
-                                      .map((keyword, i) => (
-                                        <Badge key={i} variant='destructive'>
-                                          {keyword}
-                                        </Badge>
-                                      ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {message.atsReport.suggestions.length > 0 && (
-                                <div className='flex flex-col gap-1'>
-                                  <span className='text-foreground font-medium'>
-                                    Suggestions
-                                  </span>
-                                  <ul className='text-muted-foreground flex list-disc flex-col gap-0.5 pl-4'>
-                                    {message.atsReport.suggestions
-                                      .slice(0, 5)
-                                      .map((suggestion, i) => (
-                                        <li key={i}>{suggestion}</li>
-                                      ))}
-                                  </ul>
-                                </div>
-                              )}
-
-                              <Button
-                                variant='outline'
-                                size='sm'
-                                className='h-7 w-fit gap-1.5'
-                                disabled={busy}
-                                onClick={() =>
-                                  handleApplyAts(message.atsReport!)
+                          <MessageContent>
+                            {isLoading ? (
+                              <span className='shimmer px-1 text-sm'>
+                                {message.atsLoading
+                                  ? 'Analyzing ATS score…'
+                                  : 'Thinking…'}
+                              </span>
+                            ) : (
+                              <Bubble
+                                align={
+                                  message.role === 'user' ? 'end' : 'start'
+                                }
+                                variant={
+                                  message.error
+                                    ? 'destructive'
+                                    : message.role === 'user'
+                                      ? 'default'
+                                      : 'muted'
                                 }
                               >
-                                <IconSparkles data-icon='inline-start' />
-                                Improve my resume with these
-                              </Button>
-                            </div>
-                          )}
+                                <BubbleContent>
+                                  {message.content}
+                                  {message.streaming &&
+                                    message.content &&
+                                    !message.applyingEdit && (
+                                      <span
+                                        aria-hidden
+                                        className='ml-0.5 inline-block animate-pulse'
+                                      >
+                                        ▍
+                                      </span>
+                                    )}
+                                </BubbleContent>
+                              </Bubble>
+                            )}
 
-                          {message.role === 'assistant' &&
-                            !message.streaming &&
-                            message.changes &&
-                            message.changes.length > 0 && (
-                              <div className='bg-muted/40 flex flex-col gap-2 rounded-lg border p-2.5 text-xs'>
-                                <div className='text-foreground flex items-center gap-1.5 font-medium'>
-                                  <IconPencil className='size-3.5' />
-                                  {message.undone
-                                    ? 'Changes reverted'
-                                    : 'Applied changes'}
+                            {message.applyingEdit && (
+                              <span className='shimmer px-1 text-sm'>
+                                Applying changes…
+                              </span>
+                            )}
+
+                            {message.atsReport && (
+                              <div className='bg-muted/40 flex flex-col gap-3 rounded-lg border p-3 text-xs'>
+                                <div className='flex items-baseline gap-2'>
+                                  <span className='text-foreground text-2xl font-bold'>
+                                    {message.atsReport.score}
+                                  </span>
+                                  <span className='text-muted-foreground'>
+                                    / 100 ATS match
+                                  </span>
                                 </div>
-                                <ul
-                                  className={cn(
-                                    'text-muted-foreground flex flex-col gap-1',
-                                    message.undone && 'line-through opacity-60'
-                                  )}
-                                >
-                                  {message.changes.map((change, i) => (
-                                    <li key={i} className='flex gap-1.5'>
-                                      <span aria-hidden>•</span>
-                                      <span>{change}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                                {message.undoSnapshot && (
-                                  <Button
-                                    variant='outline'
-                                    size='sm'
-                                    className='h-7 gap-1.5 self-start'
-                                    disabled={message.undone}
-                                    onClick={() => handleUndo(message.id)}
-                                  >
-                                    <IconArrowBackUp data-icon='inline-start' />
-                                    {message.undone ? 'Reverted' : 'Undo'}
-                                  </Button>
+
+                                {message.atsReport.missingKeywords.length >
+                                  0 && (
+                                  <div className='flex flex-col gap-1'>
+                                    <span className='text-foreground font-medium'>
+                                      Missing keywords
+                                    </span>
+                                    <div className='flex flex-wrap gap-1'>
+                                      {message.atsReport.missingKeywords
+                                        .slice(0, 12)
+                                        .map((keyword, i) => (
+                                          <Badge key={i} variant='destructive'>
+                                            {keyword}
+                                          </Badge>
+                                        ))}
+                                    </div>
+                                  </div>
                                 )}
+
+                                {message.atsReport.suggestions.length > 0 && (
+                                  <div className='flex flex-col gap-1'>
+                                    <span className='text-foreground font-medium'>
+                                      Suggestions
+                                    </span>
+                                    <ul className='text-muted-foreground flex list-disc flex-col gap-0.5 pl-4'>
+                                      {message.atsReport.suggestions
+                                        .slice(0, 5)
+                                        .map((suggestion, i) => (
+                                          <li key={i}>{suggestion}</li>
+                                        ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                <Button
+                                  variant='outline'
+                                  size='sm'
+                                  className='h-7 w-fit gap-1.5'
+                                  disabled={busy}
+                                  onClick={() =>
+                                    handleApplyAts(message.atsReport!)
+                                  }
+                                >
+                                  <IconSparkles data-icon='inline-start' />
+                                  Improve my resume with these
+                                </Button>
                               </div>
                             )}
-                        </MessageContent>
-                      </Message>
-                    </MessageScrollerItem>
-                  );
-                })}
-              </MessageScrollerContent>
-            </MessageScrollerViewport>
-            <MessageScrollerButton />
-          </MessageScroller>
-        </MessageScrollerProvider>
+
+                            {message.role === 'assistant' &&
+                              !message.streaming &&
+                              message.changes &&
+                              message.changes.length > 0 && (
+                                <div className='bg-muted/40 flex flex-col gap-2 rounded-lg border p-2.5 text-xs'>
+                                  <div className='text-foreground flex items-center gap-1.5 font-medium'>
+                                    <IconPencil className='size-3.5' />
+                                    {message.undone
+                                      ? 'Changes reverted'
+                                      : 'Applied changes'}
+                                  </div>
+                                  <ul
+                                    className={cn(
+                                      'text-muted-foreground flex flex-col gap-1',
+                                      message.undone &&
+                                        'line-through opacity-60'
+                                    )}
+                                  >
+                                    {message.changes.map((change, i) => (
+                                      <li key={i} className='flex gap-1.5'>
+                                        <span aria-hidden>•</span>
+                                        <span>{change}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                  {message.undoSnapshot && (
+                                    <Button
+                                      variant='outline'
+                                      size='sm'
+                                      className='h-7 gap-1.5 self-start'
+                                      disabled={message.undone}
+                                      onClick={() => handleUndo(message.id)}
+                                    >
+                                      <IconArrowBackUp data-icon='inline-start' />
+                                      {message.undone ? 'Reverted' : 'Undo'}
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                          </MessageContent>
+                        </Message>
+                      </MessageScrollerItem>
+                    );
+                  })}
+                </MessageScrollerContent>
+              </MessageScrollerViewport>
+              <MessageScrollerButton />
+            </MessageScroller>
+          </MessageScrollerProvider>
+        )}
       </div>
 
       {/* Suggestions */}

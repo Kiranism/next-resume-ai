@@ -16,16 +16,16 @@ import { Suspense } from 'react';
 import { currentUser } from '@clerk/nextjs/server';
 
 export const metadata: Metadata = {
-  title: 'My Resumes | Next Resume Builder',
+  title: 'My Resumes | CVTailor',
   description:
     'Create, manage, and customize your resumes. Use AI-powered tools to tailor your resume for specific job descriptions.',
   openGraph: {
-    title: 'My Resumes | Next Resume Builder',
+    title: 'My Resumes | CVTailor',
     description:
       'Create, manage, and customize your resumes. Use AI-powered tools to tailor your resume for specific job descriptions.'
   },
   twitter: {
-    title: 'My Resumes | Next Resume Builder',
+    title: 'My Resumes | CVTailor',
     description:
       'Create, manage, and customize your resumes. Use AI-powered tools to tailor your resume for specific job descriptions.'
   }

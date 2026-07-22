@@ -1,6 +1,6 @@
 import Providers from '@/components/layout/providers';
 import { Toaster } from '@/components/ui/sonner';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { Orbitron, Share_Tech_Mono } from 'next/font/google';
 import NextTopLoader from 'nextjs-toploader';
@@ -8,7 +8,7 @@ import './globals.css';
 import { ClerkProvider } from '@clerk/nextjs';
 
 export const metadata: Metadata = {
-  title: 'Next Resume Builder',
+  title: 'CVTailor',
   description:
     'Modern resume builder with AI-powered content generation and multiple template designs',
   keywords: [
@@ -41,30 +41,25 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: 'https://next-resume-ai.vercel.app',
-    title: 'Next Resume Builder',
+    title: 'CVTailor',
     description:
       'Modern resume builder with AI-powered content generation and multiple template designs',
-    siteName: 'Next Resume Builder',
+    siteName: 'CVTailor',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Next Resume Builder'
+        alt: 'CVTailor'
       }
     ]
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Next Resume Builder',
+    title: 'CVTailor',
     description:
       'Modern resume builder with AI-powered content generation and multiple template designs',
     images: ['/og-image.png']
-  },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1
   },
   icons: {
     icon: '/favicon.ico',
@@ -73,8 +68,14 @@ export const metadata: Metadata = {
   },
   manifest: '/site.webmanifest',
   category: 'productivity',
-  applicationName: 'Next Resume Builder',
-  generator: 'Next.js',
+  applicationName: 'CVTailor',
+  generator: 'Next.js'
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: 'white' },
     { media: '(prefers-color-scheme: dark)', color: 'black' }

@@ -5,16 +5,16 @@ import PageContainer from '@/components/layout/page-container';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export const metadata: Metadata = {
-  title: 'My Profiles | Next Resume Builder',
+  title: 'My Profiles | CVTailor',
   description:
     'Manage your professional profiles. Create and customize different profiles for various job types and industries.',
   openGraph: {
-    title: 'My Profiles | Next Resume Builder',
+    title: 'My Profiles | CVTailor',
     description:
       'Manage your professional profiles. Create and customize different profiles for various job types and industries.'
   },
   twitter: {
-    title: 'My Profiles | Next Resume Builder',
+    title: 'My Profiles | CVTailor',
     description:
       'Manage your professional profiles. Create and customize different profiles for various job types and industries.'
   }

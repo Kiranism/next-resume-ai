@@ -6,8 +6,8 @@ import { cookies } from 'next/headers';
 import LayoutWrapper from './layout.wrapper';
 
 export const metadata: Metadata = {
-  title: 'Next Shadcn Dashboard Starter',
-  description: 'Basic dashboard with Next.js and Shadcn'
+  title: 'CVTailor',
+  description: 'Your resumes and profiles on CVTailor'
 };
 
 export default async function DashboardLayout({
@@ -15,9 +15,11 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Persisting the sidebar state in the cookie.
+  // Persist the sidebar open/collapsed state across refreshes. The cookie name
+  // must match SIDEBAR_COOKIE_NAME ('sidebar_state') written by SidebarProvider.
+  // Default to open when there is no cookie yet; only 'false' collapses it.
   const cookieStore = await cookies();
-  const defaultOpen = cookieStore.get('sidebar:state')?.value === 'true';
+  const defaultOpen = cookieStore.get('sidebar_state')?.value !== 'false';
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
       <AppSidebar />

@@ -12,8 +12,8 @@ interface TemplateState {
 export const useTemplateStore = create<TemplateState>()(
   persist(
     (set) => ({
-      selectedTemplate: 'template-one',
-      currentTemplate: 'template-one',
+      selectedTemplate: 'template-five',
+      currentTemplate: 'template-five',
       setSelectedTemplate: (template) => set({ selectedTemplate: template }),
       setCurrentTemplate: (template) => set({ currentTemplate: template }),
       applyTemplate: (template) =>

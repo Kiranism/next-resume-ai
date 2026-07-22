@@ -59,16 +59,16 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   return {
-    title: 'Edit Resume | Next Resume Builder',
+    title: 'Edit Resume | CVTailor',
     description:
       'Edit and customize your resume. Fine-tune content, layout, and styling to create the perfect resume for your job application.',
     openGraph: {
-      title: 'Edit Resume | Next Resume Builder',
+      title: 'Edit Resume | CVTailor',
       description:
         'Edit and customize your resume. Fine-tune content, layout, and styling to create the perfect resume for your job application.'
     },
     twitter: {
-      title: 'Edit Resume | Next Resume Builder',
+      title: 'Edit Resume | CVTailor',
       description:
         'Edit and customize your resume. Fine-tune content, layout, and styling to create the perfect resume for your job application.'
     }

@@ -24,7 +24,25 @@ export type TemplateConfig = {
   component: ComponentType<ResumeTemplateProps>;
 };
 
+// Order here is the order shown in the picker (getAllTemplates = Object.values).
+// ATS Friendly is first and is the default; ids are unchanged so saved resumes
+// keep pointing at the right template.
 const templateRegistry: Record<string, TemplateConfig> = {
+  'template-five': {
+    id: 'template-five',
+    name: 'ATS Friendly',
+    thumbnail: '/templates/template-five.png',
+    description:
+      'Single-column, parser-safe layout optimized for ATS keyword scanning',
+    component: TemplateFive
+  },
+  'template-four': {
+    id: 'template-four',
+    name: 'Creative Professional',
+    thumbnail: '/templates/template-four.png',
+    description: 'Modern design with creative layout and color accents',
+    component: TemplateFour
+  },
   'template-one': {
     id: 'template-one',
     name: 'Professional Split',
@@ -45,21 +63,6 @@ const templateRegistry: Record<string, TemplateConfig> = {
     thumbnail: '/templates/template-three.png',
     description: 'Clean and minimal design with subtle accents',
     component: TemplateThree
-  },
-  'template-four': {
-    id: 'template-four',
-    name: 'Creative Professional',
-    thumbnail: '/templates/template-four.png',
-    description: 'Modern design with creative layout and color accents',
-    component: TemplateFour
-  },
-  'template-five': {
-    id: 'template-five',
-    name: 'ATS Friendly',
-    thumbnail: '/templates/template-five.png',
-    description:
-      'Single-column, parser-safe layout optimized for ATS keyword scanning',
-    component: TemplateFive
   }
 };
 

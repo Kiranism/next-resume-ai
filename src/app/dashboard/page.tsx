@@ -4,16 +4,16 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = {
-  title: 'Dashboard | Next Resume Builder',
+  title: 'Dashboard | CVTailor',
   description:
     'Manage your resumes and profiles in one place. Create, edit, and track your job applications.',
   openGraph: {
-    title: 'Dashboard | Next Resume Builder',
+    title: 'Dashboard | CVTailor',
     description:
       'Manage your resumes and profiles in one place. Create, edit, and track your job applications.'
   },
   twitter: {
-    title: 'Dashboard | Next Resume Builder',
+    title: 'Dashboard | CVTailor',
     description:
       'Manage your resumes and profiles in one place. Create, edit, and track your job applications.'
   }

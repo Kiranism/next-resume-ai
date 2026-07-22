@@ -19,62 +19,62 @@ export function ModeToggle({
   isMobile = false
 }: ModeToggleProps) {
   const router = useRouter();
-
-  const modes = isMobile
-    ? [
-        { value: 'edit', label: 'Form' },
-        { value: 'template', label: 'Template' },
-        { value: 'chat', label: 'Chat' },
-        { value: 'preview', label: 'Preview' }
-      ]
-    : [
-        { value: 'edit', label: 'Form' },
-        { value: 'template', label: 'Template' },
-        { value: 'chat', label: 'Chat' }
-      ];
+  const btnSize = isMobile ? 'sm' : 'default';
 
   return (
-    <div className='mb-4 flex items-center gap-2'>
+    <div className='mb-4 flex flex-wrap items-center gap-2'>
       <Button
         variant='outline'
         onClick={() => router.push('/dashboard/resume')}
-        size={isMobile ? 'sm' : 'default'}
+        size={btnSize}
       >
         <Icons.chevronLeft />
         Exit
       </Button>
 
-      {modes.map(({ value, label }) => {
-        // The Chat mode gets a standout animated button with a sparkle icon.
-        if (value === 'chat') {
-          return (
-            <AnimatedButton
-              key={value}
-              type='button'
-              onClick={() => onModeChange('chat')}
-              className={cn(
-                isMobile ? 'h-8 px-3 text-xs' : 'h-9 px-4 text-sm',
-                mode === 'chat' &&
-                  'ring-primary ring-offset-background ring-2 ring-offset-1'
-              )}
-            >
-              <IconSparkles className='text-primary size-4' />
-              {label}
-            </AnimatedButton>
-          );
-        }
+      {/* Two ways to edit the same resume — kept together as one choice. */}
+      <div className='flex items-center gap-1'>
+        <Button
+          variant={mode === 'edit' ? 'default' : 'outline'}
+          onClick={() => onModeChange('edit')}
+          size={btnSize}
+        >
+          Manual
+        </Button>
+        <AnimatedButton
+          type='button'
+          onClick={() => onModeChange('chat')}
+          className={cn(
+            isMobile ? 'h-8 px-3 text-xs' : 'h-9 px-4 text-sm',
+            mode === 'chat' &&
+              'ring-primary ring-offset-background ring-2 ring-offset-1'
+          )}
+        >
+          <IconSparkles className='text-primary size-4' />
+          AI Chat
+        </AnimatedButton>
+      </div>
 
-        return (
-          <Button
-            key={value}
-            variant={mode === value ? 'default' : 'outline'}
-            onClick={() => onModeChange(value as typeof mode)}
-            size={isMobile ? 'sm' : 'default'}
-          >
-            {label}
-          </Button>
-        );
-      })}
+      {/* Templates is a separate concern — divide it off. */}
+      <div className='bg-border mx-1 hidden h-6 w-px sm:block' />
+
+      <Button
+        variant={mode === 'template' ? 'default' : 'outline'}
+        onClick={() => onModeChange('template')}
+        size={btnSize}
+      >
+        Template
+      </Button>
+
+      {isMobile && (
+        <Button
+          variant={mode === 'preview' ? 'default' : 'outline'}
+          onClick={() => onModeChange('preview')}
+          size={btnSize}
+        >
+          Preview
+        </Button>
+      )}
     </div>
   );
 }

@@ -47,7 +47,7 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
   // Seed the template state from THIS resume's saved template so the preview and
   // the "applied" marker reflect the resume being edited (not the last one).
   useEffect(() => {
-    const saved = resume?.templateId ?? 'template-one';
+    const saved = resume?.templateId ?? 'template-five';
     setCurrentTemplate(saved);
     setSelectedTemplate(saved);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -133,8 +133,8 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
           direction='horizontal'
           className='h-full w-full rounded-lg border'
         >
-          <ResizablePanel defaultSize={45}>
-            <div className='h-full w-full p-8'>
+          <ResizablePanel defaultSize={55}>
+            <div className='h-full w-full px-8 pt-4 pb-8'>
               <div className='hidden md:block'>
                 <ModeToggle mode={mode} onModeChange={setMode} />
               </div>
@@ -144,7 +144,6 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
                     form={form}
                     resumeId={resume.id}
                     saveNow={saveNow}
-                    autosaveState={autosaveState}
                   />
                 </div>
               ) : (
@@ -155,7 +154,7 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
             </div>
           </ResizablePanel>
           <ResizableHandle />
-          <ResizablePanel defaultSize={55} minSize={45}>
+          <ResizablePanel defaultSize={45} minSize={45}>
             <div className='h-full w-full'>
               <PdfRenderer
                 formData={formData}
@@ -177,7 +176,6 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
                   form={form}
                   resumeId={resume.id}
                   saveNow={saveNow}
-                  autosaveState={autosaveState}
                 />
               </div>
             ) : mode === 'preview' ? (

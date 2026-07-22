@@ -254,7 +254,7 @@ const PdfRenderer = ({ formData, templateId, actions }: TPdfRendererProps) => {
       {/* Preview area: a full page, scaled to fit without scrolling */}
       <div
         ref={previewAreaRef}
-        className='bg-accent relative min-h-0 flex-1 overflow-hidden'
+        className='bg-muted relative min-h-0 flex-1 overflow-hidden'
       >
         <div className='absolute inset-0 flex items-center justify-center'>
           <div

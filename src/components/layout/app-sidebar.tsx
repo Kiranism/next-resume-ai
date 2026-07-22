@@ -45,7 +45,7 @@ import { usePathname } from 'next/navigation';
 import { Icons } from '../icons';
 
 export const company = {
-  name: 'Next Resume',
+  name: 'CVTailor',
   logo: Icons.resume,
   plan: 'Work in Progress'
 };

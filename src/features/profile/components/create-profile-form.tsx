@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProfileWithRelations } from '@/server/routers/profile-router';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, ArrowRight, Check, PlusCircle, Trash2 } from 'lucide-react';
@@ -733,32 +733,37 @@ export default function CreateProfileForm({ profile }: CreateProfileFormProps) {
         onSubmit={form.handleSubmit(onSubmit)}
         className='flex flex-col gap-6'
       >
-        {/* Stepper Indicators */}
-        <div className='mb-4 flex justify-center gap-2'>
-          {steps.slice(0, -1).map((_, index) => (
-            <div
-              key={index}
-              className={cn(
-                'h-1.5 w-8 rounded-full',
-                index + 1 === step ? 'bg-primary' : 'bg-muted'
-              )}
-            />
-          ))}
-        </div>
+        {/* Tabbed step navigation — jump straight to any section. */}
+        <Tabs
+          value={String(step)}
+          onValueChange={(v) => setStep(Number(v))}
+          className='w-full'
+        >
+          <TabsList className='grid h-auto w-full grid-cols-2 sm:grid-cols-4'>
+            {steps.map((s, index) => (
+              <TabsTrigger key={s.title} value={String(index + 1)}>
+                {s.title}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
         {/* Step Content */}
         <div className='min-h-[300px]'>{renderStepContent()}</div>
 
         {/* Navigation Buttons */}
-        <div className='flex justify-between'>
-          {step > 1 && (
-            <Button type='button' variant='outline' onClick={handlePrevStep}>
-              <ArrowLeft className='mr-2' /> Previous
-            </Button>
-          )}
+        <div className='flex items-center justify-between gap-2 border-t pt-4'>
+          <Button
+            type='button'
+            variant='outline'
+            onClick={handlePrevStep}
+            disabled={step === 1}
+          >
+            <ArrowLeft className='mr-2' /> Previous
+          </Button>
 
           {step < steps.length - 1 ? (
-            <Button type='button' onClick={handleNextStep} className='ml-auto'>
+            <Button type='button' onClick={handleNextStep}>
               Next <ArrowRight className='ml-2' />
             </Button>
           ) : (
@@ -766,7 +771,6 @@ export default function CreateProfileForm({ profile }: CreateProfileFormProps) {
               type='button'
               onClick={handleFinish}
               disabled={isCreating || isUpdating}
-              className='ml-auto'
             >
               Finish <Check className='ml-2' />
             </Button>

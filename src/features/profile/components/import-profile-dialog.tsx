@@ -70,12 +70,12 @@ export function ImportProfileDialog() {
       <DialogTrigger render={<Button variant='outline' />}>
         Import resume
       </DialogTrigger>
-      <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-lg'>
+      <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-xl'>
         <DialogHeader>
           <DialogTitle>Import a profile</DialogTitle>
         </DialogHeader>
         <p className='text-muted-foreground text-sm'>
-          Upload your resume PDF (or paste its text). We&apos;ll parse it into a
+          Upload your resume PDF or paste its text — we&apos;ll parse it into a
           profile you can review and edit.
         </p>
 
@@ -86,25 +86,41 @@ export function ImportProfileDialog() {
           className='hidden'
           onChange={handleFile}
         />
-        <Button
+
+        {/* Dropzone-style PDF upload */}
+        <button
           type='button'
-          variant='outline'
           disabled={isReading}
           onClick={() => fileInputRef.current?.click()}
+          className='border-input hover:border-primary hover:bg-accent/30 focus-visible:border-ring focus-visible:ring-ring/50 flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition-colors outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-60'
         >
           {isReading ? (
-            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+            <Loader2 className='text-muted-foreground size-6 animate-spin' />
           ) : (
-            <Upload className='mr-2 h-4 w-4' />
+            <Upload className='text-muted-foreground size-6' />
           )}
-          {isReading ? 'Reading PDF…' : 'Upload PDF'}
-        </Button>
+          <span className='text-sm font-medium'>
+            {isReading ? 'Reading PDF…' : 'Upload a PDF résumé'}
+          </span>
+          <span className='text-muted-foreground text-xs'>
+            {isReading ? 'Extracting text' : 'Click to browse · PDF only'}
+          </span>
+        </button>
+
+        {/* Divider */}
+        <div className='flex items-center gap-3'>
+          <span className='bg-border h-px flex-1' />
+          <span className='text-muted-foreground text-xs tracking-wide'>
+            OR PASTE TEXT
+          </span>
+          <span className='bg-border h-px flex-1' />
+        </div>
 
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder='…or paste your resume text here'
-          className='max-h-[45vh] min-h-[140px] overflow-y-auto'
+          placeholder='Paste your resume text here…'
+          className='max-h-[40vh] min-h-[140px] overflow-y-auto'
         />
         <DialogFooter>
           <Button onClick={handleImport} disabled={isPending || !text.trim()}>

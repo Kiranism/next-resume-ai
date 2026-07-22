@@ -12,7 +12,7 @@ import {
   IconTargetArrow
 } from '@tabler/icons-react';
 
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -24,22 +24,22 @@ const FEATURES = [
   {
     icon: IconSparkles,
     title: 'JD-tailored generation',
-    body: 'Paste a job description and the AI rewrites your profile into a résumé aimed at that exact role — quantified, keyword-weaved, and honest.'
+    body: 'Paste a job description and the AI rewrites your profile for that role. Quantified bullets, matched keywords, no invented experience.'
   },
   {
     icon: IconTargetArrow,
-    title: 'Real ATS score',
-    body: 'Get a 0–100 match score with the keywords you have, the ones you’re missing, and concrete edits to close the gap.'
+    title: 'ATS match score',
+    body: 'See a 0–100 score, the keywords you already have, the ones you’re missing, and the edits that close the gap.'
   },
   {
     icon: IconEye,
     title: 'Live PDF preview',
-    body: 'Every edit re-renders the résumé instantly beside the form — no flicker, no export-and-check loop.'
+    body: 'Every edit re-renders the résumé instantly beside the form. No flicker, no exporting to check your work.'
   },
   {
     icon: IconLayoutGrid,
     title: 'ATS-friendly templates',
-    body: 'Pick from clean, recruiter-ready layouts and switch in a click — then export a PDF that applicant tracking systems read perfectly.'
+    body: 'Pick from clean, recruiter-ready layouts, switch in a click, and export a PDF that applicant tracking systems read perfectly.'
   },
   {
     icon: IconFileUpload,
@@ -49,7 +49,7 @@ const FEATURES = [
   {
     icon: IconMessageChatbot,
     title: 'Edit by chat',
-    body: '“Make my summary punchier”, “add skills for this role” — talk to your résumé and watch it change live.'
+    body: 'Say “make my summary punchier” or “add skills for this role”, and watch your résumé change as you type.'
   }
 ];
 
@@ -57,7 +57,7 @@ const STEPS = [
   {
     n: '01',
     title: 'Build your profile',
-    body: 'Add your experience once — or import an existing résumé PDF and we’ll fill it in for you.'
+    body: 'Add your experience once, or import an existing résumé PDF and we’ll fill it in for you.'
   },
   {
     n: '02',
@@ -79,12 +79,31 @@ const TEMPLATES = [
   'ATS-Friendly'
 ];
 
+const CHAT: { role: 'user' | 'assistant'; text: string; applied?: boolean }[] =
+  [
+    {
+      role: 'user',
+      text: 'Make my summary more ATS-friendly for a senior frontend role.'
+    },
+    {
+      role: 'assistant',
+      text: 'Rewrote it around React, TypeScript and performance, front-loaded with the role’s keywords.',
+      applied: true
+    },
+    { role: 'user', text: 'Add a few skills for this job.' },
+    {
+      role: 'assistant',
+      text: 'Added Next.js, Tailwind CSS and Web Performance to your skills.',
+      applied: true
+    }
+  ];
+
 export function LandingPage({ isAuthed = false }: LandingPageProps) {
   const ctaHref = isAuthed ? '/dashboard/resume' : '/sign-in';
   const ctaLabel = isAuthed ? 'Open dashboard' : 'Build my résumé';
 
   return (
-    <div className='bg-background text-foreground min-h-screen'>
+    <div className='bg-background text-foreground h-screen overflow-y-auto'>
       {/* ---- Nav ---- */}
       <header className='border-border/60 bg-background/80 sticky top-0 z-40 border-b backdrop-blur'>
         <nav className='mx-auto flex h-16 max-w-6xl items-center justify-between px-4'>
@@ -92,7 +111,7 @@ export function LandingPage({ isAuthed = false }: LandingPageProps) {
             <span className='bg-primary text-primary-foreground grid size-7 place-items-center'>
               <IconFileText className='size-4' />
             </span>
-            <span className='tracking-wide'>Resume.AI</span>
+            <span className='tracking-wide'>CVTailor</span>
           </Link>
           <div className='text-muted-foreground hidden items-center gap-8 text-sm md:flex'>
             <a href='#features' className='hover:text-foreground transition'>
@@ -107,18 +126,20 @@ export function LandingPage({ isAuthed = false }: LandingPageProps) {
           </div>
           <div className='flex items-center gap-2'>
             {!isAuthed && (
-              <Button
-                variant='ghost'
-                render={<Link href='/sign-in' />}
-                className='hidden sm:inline-flex'
+              <Link
+                href='/sign-in'
+                className={cn(
+                  buttonVariants({ variant: 'ghost' }),
+                  'hidden sm:inline-flex'
+                )}
               >
                 Sign in
-              </Button>
+              </Link>
             )}
-            <Button render={<Link href={ctaHref} />}>
+            <Link href={ctaHref} className={buttonVariants()}>
               {ctaLabel}
               <IconArrowRight className='size-4' />
-            </Button>
+            </Link>
           </div>
         </nav>
       </header>
@@ -145,18 +166,21 @@ export function LandingPage({ isAuthed = false }: LandingPageProps) {
               <span className='text-primary'>every job</span> you apply to.
             </h1>
             <p className='text-muted-foreground mt-6 max-w-2xl text-base text-balance md:text-lg'>
-              Paste a job description and let the AI turn your profile into an
-              ATS-optimized résumé — with a live preview, a real match score,
-              and a clean PDF you can send in minutes.
+              Paste a job description and the AI drafts an ATS-optimized résumé
+              from your profile. Refine it by chatting with a built-in
+              assistant. Live preview, an ATS match score, a PDF you can send.
             </p>
             <div className='mt-8 flex flex-col gap-3 sm:flex-row'>
-              <Button size='lg' render={<Link href={ctaHref} />}>
+              <Link href={ctaHref} className={buttonVariants({ size: 'lg' })}>
                 {ctaLabel}
                 <IconArrowRight className='size-4' />
-              </Button>
-              <Button size='lg' variant='outline' render={<a href='#how' />}>
+              </Link>
+              <a
+                href='#how'
+                className={buttonVariants({ variant: 'outline', size: 'lg' })}
+              >
                 See how it works
-              </Button>
+              </a>
             </div>
             <div className='text-muted-foreground mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs'>
               {[
@@ -178,7 +202,7 @@ export function LandingPage({ isAuthed = false }: LandingPageProps) {
           <SectionHeading
             eyebrow='Features'
             title='Everything you need to get past the bots'
-            subtitle='Built around how real applicant tracking systems actually read a résumé.'
+            subtitle='Built around how applicant tracking systems actually read a résumé.'
           />
           <div className='mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
             {FEATURES.map(({ icon: Icon, title, body }) => (
@@ -221,12 +245,84 @@ export function LandingPage({ isAuthed = false }: LandingPageProps) {
           </div>
         </section>
 
+        {/* ---- Chat assistant ---- */}
+        <section className='mx-auto max-w-6xl px-4 py-20'>
+          <div className='grid items-center gap-10 lg:grid-cols-2'>
+            <div>
+              <span className='text-primary text-xs font-semibold tracking-widest uppercase'>
+                AI chat assistant
+              </span>
+              <h2 className='mt-3 text-3xl font-bold tracking-tight text-balance md:text-4xl'>
+                Build your résumé by chatting
+              </h2>
+              <p className='text-muted-foreground mt-4 text-balance'>
+                No forms to wrestle with. Tell the assistant what you want in
+                plain English and it edits your résumé live. It rewrites
+                bullets, works in keywords, and saves as it goes.
+              </p>
+              <ul className='mt-6 flex flex-col gap-3 text-sm'>
+                {[
+                  'Rewrites summaries and bullets on request',
+                  'Tailors your skills to the job you paste',
+                  'Every change previews live and auto-saves'
+                ].map((item) => (
+                  <li key={item} className='flex items-center gap-2'>
+                    <IconCheck className='text-primary size-4 shrink-0' />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Link href={ctaHref} className={cn(buttonVariants(), 'mt-8')}>
+                Try the assistant
+                <IconArrowRight className='size-4' />
+              </Link>
+            </div>
+
+            {/* Mock chat */}
+            <div className='border-border bg-card border p-4 shadow-lg'>
+              <div className='border-border/60 mb-3 flex items-center gap-2 border-b pb-3'>
+                <span className='bg-primary/10 text-primary grid size-7 place-items-center'>
+                  <IconMessageChatbot className='size-4' />
+                </span>
+                <span className='text-sm font-semibold'>Résumé assistant</span>
+              </div>
+              <div className='flex flex-col gap-3'>
+                {CHAT.map((m, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      'flex',
+                      m.role === 'user' ? 'justify-end' : 'justify-start'
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'max-w-[85%] px-3 py-2 text-sm',
+                        m.role === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-foreground'
+                      )}
+                    >
+                      {m.text}
+                      {m.applied && (
+                        <span className='mt-1.5 flex items-center gap-1 text-xs opacity-80'>
+                          <IconCheck className='size-3' /> Applied &amp; saved
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* ---- Templates ---- */}
         <section id='templates' className='mx-auto max-w-6xl px-4 py-20'>
           <SectionHeading
             eyebrow='Templates'
             title='Pick from ATS-friendly templates'
-            subtitle='Clean, recruiter-ready layouts that applicant tracking systems read flawlessly — switch in a click.'
+            subtitle='Clean, recruiter-ready layouts that applicant tracking systems read flawlessly. Switch in a click.'
           />
           <div className='mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-5'>
             {TEMPLATES.map((name, i) => (
@@ -265,13 +361,16 @@ export function LandingPage({ isAuthed = false }: LandingPageProps) {
               Ready for a résumé that gets noticed?
             </h2>
             <p className='text-muted-foreground mx-auto mt-4 max-w-xl text-balance'>
-              Turn your experience into an ATS-optimized, job-specific résumé —
-              your next application starts here.
+              Turn your experience into an ATS-optimized, job-specific résumé.
+              Your next application starts here.
             </p>
-            <Button size='lg' className='mt-8' render={<Link href={ctaHref} />}>
+            <Link
+              href={ctaHref}
+              className={cn(buttonVariants({ size: 'lg' }), 'mt-8')}
+            >
               {ctaLabel}
               <IconArrowRight className='size-4' />
-            </Button>
+            </Link>
           </div>
         </section>
       </main>
@@ -283,7 +382,7 @@ export function LandingPage({ isAuthed = false }: LandingPageProps) {
             <span className='bg-primary text-primary-foreground grid size-6 place-items-center'>
               <IconFileText className='size-3.5' />
             </span>
-            Resume.AI
+            CVTailor
           </div>
           <p>Build ATS-ready résumés with AI.</p>
           <div className='flex items-center gap-6'>

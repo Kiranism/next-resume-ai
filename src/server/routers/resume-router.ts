@@ -71,6 +71,7 @@ export const resumeRouter = j.router({
         id: nanoid(),
         userId: account.id,
         profileId,
+        templateId: 'template-five',
         jdJobTitle: resumeData.jd_job_title,
         employer: resumeData.employer,
         jdPostDetails: resumeData.jd_post_details,
