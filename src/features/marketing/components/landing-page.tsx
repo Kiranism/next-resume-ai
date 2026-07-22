@@ -38,8 +38,8 @@ const FEATURES = [
   },
   {
     icon: IconLayoutGrid,
-    title: '5 clean templates',
-    body: 'Switch layouts in a click, including an ATS-safe single-column design that parsers read perfectly.'
+    title: 'ATS-friendly templates',
+    body: 'Pick from clean, recruiter-ready layouts and switch in a click — then export a PDF that applicant tracking systems read perfectly.'
   },
   {
     icon: IconFileUpload,
@@ -225,8 +225,8 @@ export function LandingPage({ isAuthed = false }: LandingPageProps) {
         <section id='templates' className='mx-auto max-w-6xl px-4 py-20'>
           <SectionHeading
             eyebrow='Templates'
-            title='Five layouts, one click apart'
-            subtitle='Including a single-column, ATS-safe design that parsers read flawlessly.'
+            title='Pick from ATS-friendly templates'
+            subtitle='Clean, recruiter-ready layouts that applicant tracking systems read flawlessly — switch in a click.'
           />
           <div className='mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-5'>
             {TEMPLATES.map((name, i) => (
@@ -252,9 +252,6 @@ export function LandingPage({ isAuthed = false }: LandingPageProps) {
                   </div>
                 </div>
                 <span className='text-sm font-medium'>{name}</span>
-                {i === TEMPLATES.length - 1 && (
-                  <span className='text-primary text-xs'>ATS-safe</span>
-                )}
               </div>
             ))}
           </div>
