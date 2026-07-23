@@ -7,7 +7,7 @@ import {
   FormMessage
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { cn } from '@/lib/utils';
 import { type TResumeEditFormValues } from '@/features/resume/utils/form-schema';
 import { SectionToggleButton, useSectionVisibility } from './section-shell';
@@ -165,13 +165,10 @@ export function PersonalDetails({ control }: PersonalDetailsProps) {
               )}
             </div>
             <FormControl>
-              <Textarea
-                className={cn(
-                  'min-h-[100px]',
-                  summary.isHidden && 'opacity-50'
-                )}
-                {...field}
+              <RichTextEditor
+                className={cn(summary.isHidden && 'opacity-50')}
                 value={field.value ?? ''}
+                onChange={field.onChange}
               />
             </FormControl>
             <FormMessage />

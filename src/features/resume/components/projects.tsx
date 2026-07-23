@@ -8,7 +8,7 @@ import {
   FormMessage
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { type TResumeEditFormValues } from '../utils/form-schema';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { SectionShell } from './section-shell';
@@ -97,10 +97,9 @@ export function Projects({ control }: ProjectsProps) {
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea
-                      className='min-h-[100px]'
-                      {...field}
+                    <RichTextEditor
                       value={field.value ?? ''}
+                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage />

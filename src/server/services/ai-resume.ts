@@ -122,7 +122,11 @@ export async function generateResumeContent(
        personal_details.summary that highlights years of experience, emphasizes the
        skills most relevant to the target position, showcases key achievements from
        the work history, and aligns with the job description. Set
-       personal_details.resume_job_title to the target job title.
+       personal_details.resume_job_title to the target job title. Format
+       personal_details.summary using ONLY this minimal markup: wrap the single most
+       important metric/number in **double asterisks** for bold (e.g. "led a team of
+       **8** engineers"). Do not use any other markdown (no headings, italics,
+       links, bullet lists).
     2. Populate ALL of the sections below from the job description and the work
        history — never leave them empty:
        - skills: 8-14 of the most relevant hard and soft skills for the target role.

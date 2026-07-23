@@ -170,6 +170,12 @@ Rules:
 - Experience bullets go in jobs[].description and educations[].description.
 - Projects go in projects[] as { name, description, link } — only if the user
   mentions them; never invent projects.
+- Format jobs[].description, educations[].description, projects[].description,
+  and personal_details.summary using ONLY this minimal markup: put each
+  achievement on its own line prefixed with "- " to make a bullet; wrap the
+  single most important metric/number in each bullet in **double asterisks**
+  for bold (e.g. "- Increased signups by **32%** ..."). Do not use any other
+  markdown (no headings, italics, links).
 - Write proficiency_level values as one of: Beginner, Intermediate, Advanced,
   Expert (skills/tools) or Basic, Conversational, Fluent, Native (languages).
 

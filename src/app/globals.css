@@ -280,3 +280,25 @@
     background-position: -200% 0;
   }
 }
+
+/* RichTextEditor (src/components/ui/rich-text-editor.tsx) — Tiptap's
+   ProseMirror content box, constrained to bold + bullet list only. No
+   Placeholder extension is installed (placeholder text is rendered by the
+   component itself), so no `.is-editor-empty` rule here. */
+.ProseMirror {
+  outline: none;
+}
+.ProseMirror ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin: 0;
+}
+.ProseMirror li {
+  margin: 0.15rem 0;
+}
+.ProseMirror strong {
+  font-weight: 700;
+}
+.ProseMirror p {
+  margin: 0.15rem 0;
+}

@@ -10,7 +10,7 @@ import {
   FormMessage
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProfileWithRelations } from '@/server/routers/profile-router';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -517,10 +517,10 @@ export default function CreateProfileForm({ profile }: CreateProfileFormProps) {
                         <FormItem className='md:col-span-2'>
                           <FormLabel>Description</FormLabel>
                           <FormControl>
-                            <Textarea
+                            <RichTextEditor
                               placeholder='Enter job description'
-                              {...inputField}
-                              className='min-h-[100px]'
+                              value={inputField.value ?? ''}
+                              onChange={inputField.onChange}
                             />
                           </FormControl>
                           <FormMessage />
@@ -669,10 +669,10 @@ export default function CreateProfileForm({ profile }: CreateProfileFormProps) {
                         <FormItem className='md:col-span-2'>
                           <FormLabel>Description</FormLabel>
                           <FormControl>
-                            <Textarea
+                            <RichTextEditor
                               placeholder='Enter education description'
-                              {...inputField}
-                              className='min-h-[100px]'
+                              value={inputField.value ?? ''}
+                              onChange={inputField.onChange}
                             />
                           </FormControl>
                           <FormMessage />
