@@ -141,3 +141,42 @@ Ask the advisor to write any of these as the next numbered plan.
   exhaustion is observed.
 - **React Query `staleTime`, ESLint v8/v9 split** — low-leverage; fold into the
   dead-code/deps cleanup when it happens rather than as standalone plans.
+
+## Rich-text editing for summary & descriptions (2026-07-23, planned at `60583fb`)
+
+Maintainer's ask: let users **bold** the values that grab a reader's eye
+("**1M downloads**") and write achievements as **bullet lists** instead of
+paragraphs — on the professional summary and the experience/education/project
+descriptions. (This backlog was written directly against `main`, which now
+carries commits past the `improve/product-upgrades` branch above.)
+
+Approach: store a tiny markdown subset (`- ` for a bullet line, `**bold**` for
+emphasis) in the existing `string` fields. Legacy plain text stays valid (renders
+as a paragraph) → **no data migration**. Ship the PDF-side renderer first (030),
+then the constrained Tiptap editor (031).
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 030  | Render a bold/bullets markdown subset in every PDF template | P1 | M | — | **DONE — merged to `main` (`1af779c`)**; executed in a worktree, reviewed & verified by advisor (tsc 0, lint 0, covers 8/8, bold+bullets confirmed in PNGs). |
+| 031  | Constrained Tiptap editor (bold + bullets) for summary & descriptions | P1 | M/L | 030 | TODO — unblocked (030 is on `main`) |
+| 032  | Make `font-bold` actually render bold in templates One–Five | P2 | M | 030 | **DONE — merged to `main` (`572b9aa`)**; 37 `font-bold`→`Helvetica-Bold` across templates One–Five, reviewed & verified (all headings/titles now truly bold, 030's bullets+bold intact). |
+
+Dependency: 031 requires 030 — the editor emits `- `/`**` markup; without 030's
+shared react-pdf renderer the PDF would show it literally.
+
+Surfaced during 030's execution (worth a follow-up plan): **`font-bold` /
+`fontWeight` does not actually render bold** in the installed
+`@react-pdf/renderer@4.1.6` — its Standard-14 fonts (Helvetica/Times/Courier)
+only bold when `fontFamily` is switched to the explicit bold face
+(`Helvetica-Bold`, `Times-Bold`). This means existing "bold" text across all 8
+templates (job titles, section headers, names that use `font-bold`) currently
+renders at regular weight — a pre-existing, previously-undetected defect. 030
+worked around it for the new bold runs; fixing it template-wide is a separate,
+low-risk plan (swap `font-bold`/`fontWeight` for the explicit bold `fontFamily`).
+
+Considered and rejected: a **full** rich-text editor storing HTML or Tiptap JSON.
+react-pdf can't render HTML, an ATS résumé shouldn't carry arbitrary formatting,
+and it would force a new stored format plus a document renderer in all 8
+templates for little résumé-relevant gain. Bold + bullets delivers the actual
+need at a fraction of the risk. Italics/links deferred (same pattern; add on
+demand).
