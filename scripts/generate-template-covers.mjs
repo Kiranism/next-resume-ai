@@ -34,7 +34,10 @@ const TEMPLATES = [
   ['template-two', 'templateTwo'],
   ['template-three', 'templateThree'],
   ['template-four', 'templateFour'],
-  ['template-five', 'templateFive']
+  ['template-five', 'templateFive'],
+  ['template-six', 'templateSix'],
+  ['template-seven', 'templateSeven'],
+  ['template-eight', 'templateEight']
 ];
 
 // A complete placeholder resume that exercises every field a template renders.
@@ -51,7 +54,7 @@ const PLACEHOLDER = {
     github: 'github.com/ethancarter',
     website: 'ethancarter.dev',
     summary:
-      'Senior Software Engineer with 8+ years building and shipping production web applications with React, TypeScript, and Node.js. Led 0→1 initiatives across fintech and developer tools, improved page performance by 40%, and mentored teams of 6+ engineers. Passionate about clean architecture and a delightful user experience.'
+      'Senior Software Engineer with 8+ years building and shipping production web applications with React, TypeScript, and Node.js. Led 0-to-1 initiatives across fintech and developer tools, improved page performance by 40%, and mentored teams of 6+ engineers. Passionate about clean architecture and a delightful user experience.'
   },
   jobs: [
     {
@@ -61,7 +64,7 @@ const PLACEHOLDER = {
       startDate: '2021-01-01',
       endDate: '2025-01-01',
       description:
-        'Led development of a microservices platform serving 2M+ users. Built CI/CD pipelines that cut deploy time by 60%. Mentored 6 engineers and drove adoption of TypeScript across teams.'
+        'Led development of a microservices platform serving 2M+ users.\nBuilt CI/CD pipelines that cut deployment time by 60%.\nMentored 6 engineers and drove TypeScript adoption across teams.'
     },
     {
       jobTitle: 'Software Engineer',
@@ -70,7 +73,7 @@ const PLACEHOLDER = {
       startDate: '2017-06-01',
       endDate: '2020-12-31',
       description:
-        'Built customer-facing React apps and secure auth flows. Integrated payment gateways and optimized SQL queries, reducing p95 latency by 35%.'
+        'Built customer-facing React apps and secure authentication flows.\nIntegrated payment gateways and optimized SQL queries, cutting p95 latency by 35%.'
     },
     {
       jobTitle: 'Associate Engineer',
@@ -79,7 +82,7 @@ const PLACEHOLDER = {
       startDate: '2015-07-01',
       endDate: '2017-05-31',
       description:
-        'Developed responsive interfaces and wrote unit/integration tests. Shipped internal tools used by 200+ staff.'
+        'Developed responsive interfaces and wrote unit and integration tests.\nShipped internal tools used by 200+ staff.'
     }
   ],
   educations: [
@@ -90,7 +93,8 @@ const PLACEHOLDER = {
       city: 'Berkeley',
       startDate: '2011-08-01',
       endDate: '2015-05-31',
-      description: 'Graduated with Honors. President of the ACM student chapter.'
+      description:
+        'Graduated with Honors.\nPresident of the ACM student chapter.'
     },
     {
       school: 'Lincoln High School',
@@ -182,7 +186,10 @@ async function renderPdfs(outDir) {
         path.join(outDir, id + '.pdf')
       )});`
   ).join('\n');
-  const entry = `import { renderToFile } from '@react-pdf/renderer';
+  const entry = `import { renderToFile, Font } from '@react-pdf/renderer';
+// Match the app: registry.ts disables hyphenation, but this bundle imports the
+// template components directly, so register the same callback here too.
+Font.registerHyphenationCallback((w) => [w]);
 ${imports}
 const data = ${JSON.stringify(PLACEHOLDER)};
 (async () => {

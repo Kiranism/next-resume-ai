@@ -11,6 +11,9 @@ import TemplateTwo from './templateTwo';
 import TemplateThree from './templateThree';
 import TemplateFour from './templateFour';
 import TemplateFive from './templateFive';
+import TemplateSix from './templateSix';
+import TemplateSeven from './templateSeven';
+import TemplateEight from './templateEight';
 
 export type ResumeTemplateProps = {
   formData: TResumeEditFormValues;
@@ -35,6 +38,28 @@ const templateRegistry: Record<string, TemplateConfig> = {
     description:
       'Single-column, parser-safe layout optimized for ATS keyword scanning',
     component: TemplateFive
+  },
+  'template-six': {
+    id: 'template-six',
+    name: 'Executive Blue',
+    thumbnail: '/templates/template-six.png',
+    description:
+      'Single-column with blue accent headings, ideal for senior roles',
+    component: TemplateSix
+  },
+  'template-seven': {
+    id: 'template-seven',
+    name: 'Classic Timeline',
+    thumbnail: '/templates/template-seven.png',
+    description: 'Centered header with a left label column and ruled sections',
+    component: TemplateSeven
+  },
+  'template-eight': {
+    id: 'template-eight',
+    name: 'Elegant Serif',
+    thumbnail: '/templates/template-eight.png',
+    description: 'Refined serif typography with underlined section headings',
+    component: TemplateEight
   },
   'template-four': {
     id: 'template-four',
