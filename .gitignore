@@ -38,3 +38,7 @@ next-env.d.ts
 .idea/
 # clerk configuration (can include secrets)
 /.clerk/
+
+# pnpm build-approval artifact (single-package repo; a stray one with no
+# `packages:` field breaks Vercel's pnpm build). Keep it out of git.
+/pnpm-workspace.yaml
