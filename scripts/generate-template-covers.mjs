@@ -40,6 +40,20 @@ const TEMPLATES = [
   ['template-eight', 'templateEight']
 ];
 
+// Optional CLI filter: `node scripts/generate-template-covers.mjs template-six`
+// renders only the given template id(s) — fast when iterating on one template.
+// No args → render everything.
+const ONLY = process.argv.slice(2).filter((a) => !a.startsWith('-'));
+const SELECTED = ONLY.length
+  ? TEMPLATES.filter(([id]) => ONLY.includes(id))
+  : TEMPLATES;
+if (ONLY.length && SELECTED.length === 0) {
+  console.error(
+    `No template matches: ${ONLY.join(', ')}\nKnown ids: ${TEMPLATES.map((t) => t[0]).join(', ')}`
+  );
+  process.exit(1);
+}
+
 // A complete placeholder resume that exercises every field a template renders.
 const PLACEHOLDER = {
   personal_details: {
@@ -176,11 +190,11 @@ function findChrome() {
 async function renderPdfs(outDir) {
   const entryFile = path.join(ROOT, '.covers-render.entry.tsx');
   const bundleFile = path.join(ROOT, '.covers-render.cjs');
-  const imports = TEMPLATES.map(
+  const imports = SELECTED.map(
     ([, comp], i) =>
       `import T${i} from ${JSON.stringify(path.join(TEMPLATES_DIR, comp))};`
   ).join('\n');
-  const renders = TEMPLATES.map(
+  const renders = SELECTED.map(
     ([id], i) =>
       `  await renderToFile(<T${i} formData={data} />, ${JSON.stringify(
         path.join(outDir, id + '.pdf')
@@ -351,7 +365,7 @@ async function rasterize(pdfDir) {
     const cdp = new CDP(ws);
 
     fs.mkdirSync(PUBLIC_TEMPLATES, { recursive: true });
-    for (const [id] of TEMPLATES) {
+    for (const [id] of SELECTED) {
       const { targetId } = await cdp.send('Target.createTarget', {
         url: 'about:blank'
       });
