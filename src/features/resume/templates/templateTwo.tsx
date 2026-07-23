@@ -1,6 +1,7 @@
 import { TResumeEditFormValues } from '../utils/form-schema';
 import { Document, Page, Text, View } from '@react-pdf/renderer';
 import { createTw } from 'react-pdf-tailwind';
+import { RichText } from './rich-text';
 
 const tw = createTw({
   theme: {
@@ -95,7 +96,11 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
             <Text style={tw('text-lg font-bold text-primary mb-2')}>
               Professional Summary
             </Text>
-            <Text style={tw('text-[10px] leading-relaxed')}>{pd.summary}</Text>
+            <RichText
+              content={pd.summary}
+              textStyle={tw('text-[10px] leading-relaxed')}
+              gap={tw('mb-0.5')}
+            />
           </View>
         ) : null}
 
@@ -121,9 +126,13 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
                           : ''}
                       </Text>
                       {job?.description ? (
-                        <Text style={tw('text-[10px] mt-1 leading-relaxed')}>
-                          {job.description}
-                        </Text>
+                        <View style={tw('mt-1')}>
+                          <RichText
+                            content={job.description}
+                            textStyle={tw('text-[10px] leading-relaxed')}
+                            gap={tw('mb-0.5')}
+                          />
+                        </View>
                       ) : null}
                     </View>
                   ))}
@@ -148,9 +157,13 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
                         </Text>
                       ) : null}
                       {proj?.description ? (
-                        <Text style={tw('text-[10px] mt-1 leading-relaxed')}>
-                          {proj.description}
-                        </Text>
+                        <View style={tw('mt-1')}>
+                          <RichText
+                            content={proj.description}
+                            textStyle={tw('text-[10px] leading-relaxed')}
+                            gap={tw('mb-0.5')}
+                          />
+                        </View>
                       ) : null}
                     </View>
                   ))}
@@ -177,9 +190,13 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
                           : ''}
                       </Text>
                       {edu?.description ? (
-                        <Text style={tw('text-[10px] mt-1 leading-relaxed')}>
-                          {edu.description}
-                        </Text>
+                        <View style={tw('mt-1')}>
+                          <RichText
+                            content={edu.description}
+                            textStyle={tw('text-[10px] leading-relaxed')}
+                            gap={tw('mb-0.5')}
+                          />
+                        </View>
                       ) : null}
                     </View>
                   ))}

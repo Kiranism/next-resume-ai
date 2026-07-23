@@ -2,6 +2,7 @@ import { TResumeEditFormValues } from '../utils/form-schema';
 import { Document, Page, Text, View } from '@react-pdf/renderer';
 import { createTw } from 'react-pdf-tailwind';
 import { ReactNode } from 'react';
+import { RichText } from './rich-text';
 
 const tw = createTw({ theme: { extend: {} } });
 
@@ -41,12 +42,6 @@ const range = (start?: string, end?: string) => {
   return a || b || '';
 };
 
-const bullets = (text?: string | null) =>
-  (text || '')
-    .split('\n')
-    .map((t) => t.trim())
-    .filter(Boolean);
-
 type TResumeTemplateProps = { formData: TResumeEditFormValues };
 
 const Section = ({
@@ -67,13 +62,6 @@ const Section = ({
       {title}
     </Text>
     {children}
-  </View>
-);
-
-const Bullet = ({ text }: { text: string }) => (
-  <View style={tw('flex flex-row mb-0.5 pl-3')}>
-    <Text style={tw('text-[10px] w-3')}>•</Text>
-    <Text style={tw('text-[10px] flex-1 leading-relaxed')}>{text}</Text>
   </View>
 );
 
@@ -167,7 +155,14 @@ export default function ResumeTemplateEight({
         </View>
 
         {!hidden.includes('summary') && summary ? (
-          <Text style={tw('text-[10px] leading-relaxed mb-4')}>{summary}</Text>
+          <View style={tw('mb-4')}>
+            <RichText
+              content={summary}
+              textStyle={tw('text-[10px] leading-relaxed')}
+              boldStyle={{ fontFamily: SERIF_BOLD }}
+              gap={tw('mb-0.5')}
+            />
+          </View>
         ) : null}
 
         {hasProficiencies ? (
@@ -215,9 +210,14 @@ export default function ResumeTemplateEight({
                     {job.jobTitle}
                   </Text>
                 ) : null}
-                {bullets(job?.description).map((b, j) => (
-                  <Bullet key={j} text={b} />
-                ))}
+                <View style={tw('pl-3')}>
+                  <RichText
+                    content={job?.description}
+                    textStyle={tw('text-[10px] leading-relaxed')}
+                    boldStyle={{ fontFamily: SERIF_BOLD }}
+                    gap={tw('mb-0.5')}
+                  />
+                </View>
               </View>
             ))}
           </Section>
@@ -244,9 +244,14 @@ export default function ResumeTemplateEight({
                     </Text>
                   ) : null}
                 </View>
-                {bullets(proj?.description).map((b, j) => (
-                  <Bullet key={j} text={b} />
-                ))}
+                <View style={tw('pl-3')}>
+                  <RichText
+                    content={proj?.description}
+                    textStyle={tw('text-[10px] leading-relaxed')}
+                    boldStyle={{ fontFamily: SERIF_BOLD }}
+                    gap={tw('mb-0.5')}
+                  />
+                </View>
               </View>
             ))}
           </Section>

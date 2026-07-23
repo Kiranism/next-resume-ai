@@ -2,6 +2,7 @@ import { TResumeEditFormValues } from '../utils/form-schema';
 import { Document, Page, Text, View } from '@react-pdf/renderer';
 import { createTw } from 'react-pdf-tailwind';
 import { ReactNode } from 'react';
+import { RichText } from './rich-text';
 
 const tw = createTw({ theme: { extend: {} } });
 
@@ -40,14 +41,6 @@ const range = (start?: string, end?: string) => {
   return a || b || '';
 };
 
-// Split a description into bullet lines. Users who write one line per point get
-// bullets; a single paragraph renders as one line.
-const bullets = (text?: string | null) =>
-  (text || '')
-    .split('\n')
-    .map((t) => t.trim())
-    .filter(Boolean);
-
 type TResumeTemplateProps = { formData: TResumeEditFormValues };
 
 const Section = ({
@@ -65,15 +58,6 @@ const Section = ({
       {title}
     </Text>
     {children}
-  </View>
-);
-
-const Bullet = ({ text }: { text: string }) => (
-  <View style={tw('flex flex-row mb-0.5')}>
-    <Text style={[tw('text-[10px] w-3'), { color: BLUE }]}>•</Text>
-    <Text style={[tw('text-[10px] flex-1 leading-relaxed'), { color: INK }]}>
-      {text}
-    </Text>
   </View>
 );
 
@@ -124,11 +108,13 @@ export default function ResumeTemplateSix({ formData }: TResumeTemplateProps) {
         </View>
 
         {!hidden.includes('summary') && summary ? (
-          <Text
-            style={[tw('text-[10px] leading-relaxed mb-4'), { color: INK }]}
-          >
-            {summary}
-          </Text>
+          <View style={tw('mb-4')}>
+            <RichText
+              content={summary}
+              textStyle={[tw('text-[10px] leading-relaxed'), { color: INK }]}
+              gap={tw('mb-0.5')}
+            />
+          </View>
         ) : null}
 
         {!hidden.includes('experience') && jobs.length > 0 ? (
@@ -155,9 +141,15 @@ export default function ResumeTemplateSix({ formData }: TResumeTemplateProps) {
                     {job.jobTitle}
                   </Text>
                 ) : null}
-                {bullets(job?.description).map((b, j) => (
-                  <Bullet key={j} text={b} />
-                ))}
+                <RichText
+                  content={job?.description}
+                  textStyle={[
+                    tw('text-[10px] leading-relaxed'),
+                    { color: INK }
+                  ]}
+                  bulletStyle={[tw('text-[10px]'), { color: BLUE }]}
+                  gap={tw('mb-0.5')}
+                />
               </View>
             ))}
           </Section>
@@ -181,9 +173,15 @@ export default function ResumeTemplateSix({ formData }: TResumeTemplateProps) {
                     </Text>
                   ) : null}
                 </View>
-                {bullets(proj?.description).map((b, j) => (
-                  <Bullet key={j} text={b} />
-                ))}
+                <RichText
+                  content={proj?.description}
+                  textStyle={[
+                    tw('text-[10px] leading-relaxed'),
+                    { color: INK }
+                  ]}
+                  bulletStyle={[tw('text-[10px]'), { color: BLUE }]}
+                  gap={tw('mb-0.5')}
+                />
               </View>
             ))}
           </Section>

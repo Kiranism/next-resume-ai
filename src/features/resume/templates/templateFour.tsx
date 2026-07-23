@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { TResumeEditFormValues } from '../utils/form-schema';
 import { Document, Page, Text, View } from '@react-pdf/renderer';
 import { createTw } from 'react-pdf-tailwind';
+import { RichText } from './rich-text';
 
 const tw = createTw({
   theme: {
@@ -25,15 +26,6 @@ const SectionTitle = ({ children }: { children: ReactNode }) => (
   // minPresenceAhead keeps a header from being orphaned at the bottom of a page.
   <View style={tw('border-b border-accent mb-2 pb-1')} minPresenceAhead={24}>
     <Text style={tw('text-base font-bold text-primary')}>{children}</Text>
-  </View>
-);
-
-const BulletPoint = ({ text }: { text: string }) => (
-  <View style={tw('flex flex-row items-start gap-2')}>
-    <Text style={tw('text-accent text-[9px]')}>•</Text>
-    <Text style={tw('text-[10px] flex-1 leading-relaxed text-secondary')}>
-      {text}
-    </Text>
   </View>
 );
 
@@ -128,7 +120,14 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
                   </Text>
                   {job?.description ? (
                     <View style={tw('mt-1')}>
-                      <BulletPoint text={job.description} />
+                      <RichText
+                        content={job.description}
+                        textStyle={tw(
+                          'text-[10px] leading-relaxed text-secondary'
+                        )}
+                        bulletStyle={tw('text-accent text-[9px]')}
+                        gap={tw('mb-0.5')}
+                      />
                     </View>
                   ) : null}
                 </View>
@@ -157,7 +156,14 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
                   </View>
                   {proj?.description ? (
                     <View style={tw('mt-1')}>
-                      <BulletPoint text={proj.description} />
+                      <RichText
+                        content={proj.description}
+                        textStyle={tw(
+                          'text-[10px] leading-relaxed text-secondary'
+                        )}
+                        bulletStyle={tw('text-accent text-[9px]')}
+                        gap={tw('mb-0.5')}
+                      />
                     </View>
                   ) : null}
                 </View>

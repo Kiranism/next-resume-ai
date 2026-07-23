@@ -2,6 +2,7 @@ import { TResumeEditFormValues } from '../utils/form-schema';
 import { Document, Page, Text, View } from '@react-pdf/renderer';
 import { createTw } from 'react-pdf-tailwind';
 import { ReactNode } from 'react';
+import { RichText } from './rich-text';
 
 const tw = createTw({ theme: { extend: {} } });
 
@@ -38,12 +39,6 @@ const range = (start?: string, end?: string) => {
   return a || b || '';
 };
 
-const bullets = (text?: string | null) =>
-  (text || '')
-    .split('\n')
-    .map((t) => t.trim())
-    .filter(Boolean);
-
 // Letter-spaced caps label used down the left column of every section.
 const spaced = (label: string) => label.toUpperCase().split('').join(' ');
 
@@ -66,15 +61,6 @@ const Section = ({
       </Text>
       <View style={tw('flex-1')}>{children}</View>
     </View>
-  </View>
-);
-
-const Bullet = ({ text }: { text: string }) => (
-  <View style={tw('flex flex-row mb-0.5')}>
-    <Text style={[tw('text-[9.5px] w-3'), { color: MUTED }]}>•</Text>
-    <Text style={[tw('text-[9.5px] flex-1 leading-relaxed'), { color: INK }]}>
-      {text}
-    </Text>
   </View>
 );
 
@@ -130,7 +116,12 @@ export default function ResumeTemplateSeven({
 
         {!hidden.includes('summary') && summary ? (
           <Section label='Profile'>
-            <Text style={tw('text-[9.5px] leading-relaxed')}>{summary}</Text>
+            <RichText
+              content={summary}
+              textStyle={tw('text-[9.5px] leading-relaxed')}
+              bulletStyle={[tw('text-[9.5px]'), { color: MUTED }]}
+              gap={tw('mb-0.5')}
+            />
           </Section>
         ) : null}
 
@@ -156,9 +147,15 @@ export default function ResumeTemplateSeven({
                     {range(job?.startDate, job?.endDate)}
                   </Text>
                 ) : null}
-                {bullets(job?.description).map((b, j) => (
-                  <Bullet key={j} text={b} />
-                ))}
+                <RichText
+                  content={job?.description}
+                  textStyle={[
+                    tw('text-[9.5px] leading-relaxed'),
+                    { color: INK }
+                  ]}
+                  bulletStyle={[tw('text-[9.5px]'), { color: MUTED }]}
+                  gap={tw('mb-0.5')}
+                />
               </View>
             ))}
           </Section>
@@ -180,9 +177,15 @@ export default function ResumeTemplateSeven({
                     </Text>
                   ) : null}
                 </View>
-                {bullets(proj?.description).map((b, j) => (
-                  <Bullet key={j} text={b} />
-                ))}
+                <RichText
+                  content={proj?.description}
+                  textStyle={[
+                    tw('text-[9.5px] leading-relaxed'),
+                    { color: INK }
+                  ]}
+                  bulletStyle={[tw('text-[9.5px]'), { color: MUTED }]}
+                  gap={tw('mb-0.5')}
+                />
               </View>
             ))}
           </Section>
@@ -206,9 +209,15 @@ export default function ResumeTemplateSeven({
                     </Text>
                   ) : null}
                 </View>
-                {bullets(edu?.description).map((b, j) => (
-                  <Bullet key={j} text={b} />
-                ))}
+                <RichText
+                  content={edu?.description}
+                  textStyle={[
+                    tw('text-[9.5px] leading-relaxed'),
+                    { color: INK }
+                  ]}
+                  bulletStyle={[tw('text-[9.5px]'), { color: MUTED }]}
+                  gap={tw('mb-0.5')}
+                />
               </View>
             ))}
           </Section>

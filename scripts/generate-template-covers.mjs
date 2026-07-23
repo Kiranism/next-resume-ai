@@ -78,7 +78,7 @@ const PLACEHOLDER = {
       startDate: '2021-01-01',
       endDate: '2025-01-01',
       description:
-        'Led development of a microservices platform serving 2M+ users.\nBuilt CI/CD pipelines that cut deployment time by 60%.\nMentored 6 engineers and drove TypeScript adoption across teams.'
+        '- Led development of a microservices platform serving **2M+ users**.\n- Built CI/CD pipelines that cut deployment time by **60%**.\n- Mentored 6 engineers and drove TypeScript adoption across teams.'
     },
     {
       jobTitle: 'Software Engineer',
@@ -87,7 +87,7 @@ const PLACEHOLDER = {
       startDate: '2017-06-01',
       endDate: '2020-12-31',
       description:
-        'Built customer-facing React apps and secure authentication flows.\nIntegrated payment gateways and optimized SQL queries, cutting p95 latency by 35%.'
+        '- Built customer-facing React apps and secure authentication flows.\n- Integrated payment gateways and optimized SQL queries, cutting p95 latency by **35%**.'
     },
     {
       jobTitle: 'Associate Engineer',
@@ -96,7 +96,7 @@ const PLACEHOLDER = {
       startDate: '2015-07-01',
       endDate: '2017-05-31',
       description:
-        'Developed responsive interfaces and wrote unit and integration tests.\nShipped internal tools used by 200+ staff.'
+        '- Developed responsive interfaces and wrote unit and integration tests.\n- Shipped internal tools used by **200+ staff**.'
     }
   ],
   educations: [
@@ -108,7 +108,7 @@ const PLACEHOLDER = {
       startDate: '2011-08-01',
       endDate: '2015-05-31',
       description:
-        'Graduated with Honors.\nPresident of the ACM student chapter.'
+        '- Graduated with **Honors**.\n- President of the ACM student chapter.'
     },
     {
       school: 'Lincoln High School',
