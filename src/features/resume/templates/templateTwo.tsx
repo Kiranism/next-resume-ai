@@ -16,6 +16,8 @@ const tw = createTw({
   }
 });
 
+const BOLD = 'Helvetica-Bold';
+
 type TResumeTemplateProps = {
   formData: TResumeEditFormValues;
 };
@@ -61,7 +63,12 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
 
         {/* Header */}
         <View style={tw('mt-5 text-center mb-6')}>
-          <Text style={tw('text-3xl font-bold text-primary leading-none')}>
+          <Text
+            style={[
+              tw('text-3xl text-primary leading-none'),
+              { fontFamily: BOLD }
+            ]}
+          >
             {pd?.fname ?? 'First Name'} {pd?.lname ?? 'Last Name'}
           </Text>
           <View style={tw('flex flex-row flex-wrap justify-center gap-3 mt-2')}>
@@ -93,7 +100,9 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
         {/* Summary */}
         {!hidden.includes('summary') && pd?.summary ? (
           <View style={tw('mb-5')}>
-            <Text style={tw('text-lg font-bold text-primary mb-2')}>
+            <Text
+              style={[tw('text-lg text-primary mb-2'), { fontFamily: BOLD }]}
+            >
               Professional Summary
             </Text>
             <RichText
@@ -110,13 +119,23 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
           <View style={tw('w-2/3 pr-5')}>
             {!hidden.includes('experience') && jobs.length > 0 ? (
               <View style={tw('mb-5')}>
-                <Text style={tw('text-[13px] font-bold text-primary mb-1.5')}>
+                <Text
+                  style={[
+                    tw('text-[13px] text-primary mb-1.5'),
+                    { fontFamily: BOLD }
+                  ]}
+                >
                   Work Experience
                 </Text>
                 <View>
                   {jobs.map((job, index) => (
                     <View wrap={false} key={index} style={tw('mb-3')}>
-                      <Text style={tw('text-[12px] font-bold text-primary')}>
+                      <Text
+                        style={[
+                          tw('text-[12px] text-primary'),
+                          { fontFamily: BOLD }
+                        ]}
+                      >
                         {job?.jobTitle ?? ''}
                       </Text>
                       <Text style={tw('text-[9px] text-muted mt-0.5')}>
@@ -142,13 +161,23 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
 
             {!hidden.includes('projects') && projects.length > 0 ? (
               <View style={tw('mb-5')}>
-                <Text style={tw('text-[13px] font-bold text-primary mb-1.5')}>
+                <Text
+                  style={[
+                    tw('text-[13px] text-primary mb-1.5'),
+                    { fontFamily: BOLD }
+                  ]}
+                >
                   Projects
                 </Text>
                 <View>
                   {projects.map((proj, index) => (
                     <View wrap={false} key={index} style={tw('mb-3')}>
-                      <Text style={tw('text-[12px] font-bold text-primary')}>
+                      <Text
+                        style={[
+                          tw('text-[12px] text-primary'),
+                          { fontFamily: BOLD }
+                        ]}
+                      >
                         {proj?.name ?? ''}
                       </Text>
                       {proj?.link ? (
@@ -173,13 +202,23 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
 
             {!hidden.includes('education') && educations.length > 0 ? (
               <View style={tw('mb-5')}>
-                <Text style={tw('text-[13px] font-bold text-primary mb-1.5')}>
+                <Text
+                  style={[
+                    tw('text-[13px] text-primary mb-1.5'),
+                    { fontFamily: BOLD }
+                  ]}
+                >
                   Education
                 </Text>
                 <View>
                   {educations.map((edu, index) => (
                     <View key={index} wrap={false} style={tw('mb-3')}>
-                      <Text style={tw('text-[12px] font-bold text-primary')}>
+                      <Text
+                        style={[
+                          tw('text-[12px] text-primary'),
+                          { fontFamily: BOLD }
+                        ]}
+                      >
                         {edu?.degree ?? ''}
                         {edu?.field ? ` in ${edu.field}` : ''}
                       </Text>
@@ -209,7 +248,12 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
           <View style={tw('w-1/3 pl-5 border-l border-[#e5e7eb]')}>
             {!hidden.includes('skills') && skills.length > 0 ? (
               <View style={tw('mb-5')}>
-                <Text style={tw('text-[13px] font-bold text-primary mb-1.5')}>
+                <Text
+                  style={[
+                    tw('text-[13px] text-primary mb-1.5'),
+                    { fontFamily: BOLD }
+                  ]}
+                >
                   Skills
                 </Text>
                 <BulletedList
@@ -219,7 +263,12 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
             ) : null}
             {!hidden.includes('tools') && tools.length > 0 ? (
               <View style={tw('mb-5')}>
-                <Text style={tw('text-[13px] font-bold text-primary mb-1.5')}>
+                <Text
+                  style={[
+                    tw('text-[13px] text-primary mb-1.5'),
+                    { fontFamily: BOLD }
+                  ]}
+                >
                   Tools
                 </Text>
                 <BulletedList
@@ -229,7 +278,12 @@ export default function ResumeTemplateTwo({ formData }: TResumeTemplateProps) {
             ) : null}
             {!hidden.includes('languages') && languages.length > 0 ? (
               <View style={tw('mb-5')}>
-                <Text style={tw('text-[13px] font-bold text-primary mb-1.5')}>
+                <Text
+                  style={[
+                    tw('text-[13px] text-primary mb-1.5'),
+                    { fontFamily: BOLD }
+                  ]}
+                >
                   Languages
                 </Text>
                 <BulletedList

@@ -15,6 +15,8 @@ const tw = createTw({
   }
 });
 
+const BOLD = 'Helvetica-Bold';
+
 type TResumeTemplateProps = {
   formData: TResumeEditFormValues;
 };
@@ -60,7 +62,9 @@ export default function ResumeTemplate({ formData }: TResumeTemplateProps) {
         <View
           style={tw('w-[32%] min-h-full flex flex-col text-white bg-black p-6')}
         >
-          <Text style={tw('text-2xl font-bold leading-none mb-4')}>
+          <Text
+            style={[tw('text-2xl leading-none mb-4'), { fontFamily: BOLD }]}
+          >
             {pd?.fname ?? 'First Name'} {pd?.lname ?? 'Last Name'}
           </Text>
 
@@ -91,7 +95,9 @@ export default function ResumeTemplate({ formData }: TResumeTemplateProps) {
 
           {!hidden.includes('skills') && skills.length > 0 ? (
             <View style={tw('mb-4')}>
-              <Text style={tw('text-sm font-bold text-white mb-1.5')}>
+              <Text
+                style={[tw('text-sm text-white mb-1.5'), { fontFamily: BOLD }]}
+              >
                 Skills
               </Text>
               <BulletedList
@@ -101,7 +107,9 @@ export default function ResumeTemplate({ formData }: TResumeTemplateProps) {
           ) : null}
           {!hidden.includes('tools') && tools.length > 0 ? (
             <View style={tw('mb-4')}>
-              <Text style={tw('text-sm font-bold text-white mb-1.5')}>
+              <Text
+                style={[tw('text-sm text-white mb-1.5'), { fontFamily: BOLD }]}
+              >
                 Tools
               </Text>
               <BulletedList items={tools.map((t) => ({ name: t.tool_name }))} />
@@ -109,7 +117,9 @@ export default function ResumeTemplate({ formData }: TResumeTemplateProps) {
           ) : null}
           {!hidden.includes('languages') && languages.length > 0 ? (
             <View style={tw('mb-4')}>
-              <Text style={tw('text-sm font-bold text-white mb-1.5')}>
+              <Text
+                style={[tw('text-sm text-white mb-1.5'), { fontFamily: BOLD }]}
+              >
                 Languages
               </Text>
               <BulletedList
@@ -123,7 +133,12 @@ export default function ResumeTemplate({ formData }: TResumeTemplateProps) {
         <View style={tw('w-[68%] flex flex-col bg-white p-6')}>
           {!hidden.includes('summary') && pd?.summary ? (
             <View style={tw('mb-5')}>
-              <Text style={tw('text-base font-bold text-[#111827] mb-1.5')}>
+              <Text
+                style={[
+                  tw('text-base text-[#111827] mb-1.5'),
+                  { fontFamily: BOLD }
+                ]}
+              >
                 Summary
               </Text>
               <RichText
@@ -136,14 +151,21 @@ export default function ResumeTemplate({ formData }: TResumeTemplateProps) {
 
           {!hidden.includes('education') && educations.length > 0 ? (
             <View style={tw('mb-5')}>
-              <Text style={tw('text-base font-bold text-[#111827] mb-1.5')}>
+              <Text
+                style={[
+                  tw('text-base text-[#111827] mb-1.5'),
+                  { fontFamily: BOLD }
+                ]}
+              >
                 Education
               </Text>
               <View>
                 {educations.map((edu, i) => (
                   <View key={i} wrap={false} style={tw('mb-2.5')}>
                     <View style={tw('flex flex-row items-baseline gap-3')}>
-                      <Text style={tw('flex-1 text-[11px] font-bold')}>
+                      <Text
+                        style={[tw('flex-1 text-[11px]'), { fontFamily: BOLD }]}
+                      >
                         {edu?.degree ?? ''}
                         {edu?.field ? ` in ${edu.field}` : ''}
                         {edu?.school ? ` · ${edu.school}` : ''}
@@ -173,14 +195,21 @@ export default function ResumeTemplate({ formData }: TResumeTemplateProps) {
 
           {!hidden.includes('experience') && jobs.length > 0 ? (
             <View style={tw('mb-5')}>
-              <Text style={tw('text-base font-bold text-[#111827] mb-1.5')}>
+              <Text
+                style={[
+                  tw('text-base text-[#111827] mb-1.5'),
+                  { fontFamily: BOLD }
+                ]}
+              >
                 Employment History
               </Text>
               <View>
                 {jobs.map((job, i) => (
                   <View key={i} wrap={false} style={tw('mb-2.5')}>
                     <View style={tw('flex flex-row items-baseline gap-3')}>
-                      <Text style={tw('flex-1 text-[11px] font-bold')}>
+                      <Text
+                        style={[tw('flex-1 text-[11px]'), { fontFamily: BOLD }]}
+                      >
                         {job?.jobTitle ?? ''}
                         {job?.employer ? ` · ${job.employer}` : ''}
                       </Text>
@@ -209,14 +238,21 @@ export default function ResumeTemplate({ formData }: TResumeTemplateProps) {
 
           {!hidden.includes('projects') && projects.length > 0 ? (
             <View style={tw('mb-5')}>
-              <Text style={tw('text-base font-bold text-[#111827] mb-1.5')}>
+              <Text
+                style={[
+                  tw('text-base text-[#111827] mb-1.5'),
+                  { fontFamily: BOLD }
+                ]}
+              >
                 Projects
               </Text>
               <View>
                 {projects.map((proj, i) => (
                   <View key={i} wrap={false} style={tw('mb-2.5')}>
                     <View style={tw('flex flex-row items-baseline gap-3')}>
-                      <Text style={tw('flex-1 text-[11px] font-bold')}>
+                      <Text
+                        style={[tw('flex-1 text-[11px]'), { fontFamily: BOLD }]}
+                      >
                         {proj?.name ?? ''}
                       </Text>
                       {proj?.link ? (

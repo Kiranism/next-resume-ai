@@ -6,6 +6,8 @@ import { RichText } from './rich-text';
 
 const tw = createTw({ theme: { extend: {} } });
 
+const BOLD = 'Helvetica-Bold';
+
 type TResumeTemplateProps = {
   formData: TResumeEditFormValues;
 };
@@ -26,9 +28,12 @@ const Section = ({
 }) => (
   <View style={tw('mb-3.5')}>
     <Text
-      style={tw(
-        'text-[10px] font-bold tracking-[1.5px] text-[#111827] border-b border-[#9ca3af] pb-1 mb-2'
-      )}
+      style={[
+        tw(
+          'text-[10px] tracking-[1.5px] text-[#111827] border-b border-[#9ca3af] pb-1 mb-2'
+        ),
+        { fontFamily: BOLD }
+      ]}
       minPresenceAhead={28}
     >
       {title}
@@ -62,7 +67,12 @@ export default function ResumeTemplateFive({ formData }: TResumeTemplateProps) {
       <Page size='A4' style={tw('px-12 py-10 text-[#1f2937]')}>
         {/* Header */}
         <View style={tw('mb-4')}>
-          <Text style={tw('text-[24px] font-bold text-[#111827] leading-none')}>
+          <Text
+            style={[
+              tw('text-[24px] text-[#111827] leading-none'),
+              { fontFamily: BOLD }
+            ]}
+          >
             {pd?.fname ?? 'First Name'} {pd?.lname ?? 'Last Name'}
           </Text>
           {pd?.resume_job_title ? (
@@ -109,7 +119,10 @@ export default function ResumeTemplateFive({ formData }: TResumeTemplateProps) {
               <View key={i} style={tw('mb-2.5')} wrap={false}>
                 <View style={tw('flex flex-row items-baseline gap-3')}>
                   <Text
-                    style={tw('flex-1 text-[11px] font-bold text-[#111827]')}
+                    style={[
+                      tw('flex-1 text-[11px] text-[#111827]'),
+                      { fontFamily: BOLD }
+                    ]}
                   >
                     {job?.jobTitle ?? ''}
                     {job?.employer ? `, ${job.employer}` : ''}
@@ -145,7 +158,10 @@ export default function ResumeTemplateFive({ formData }: TResumeTemplateProps) {
               <View key={i} style={tw('mb-2.5')} wrap={false}>
                 <View style={tw('flex flex-row items-baseline gap-3')}>
                   <Text
-                    style={tw('flex-1 text-[11px] font-bold text-[#111827]')}
+                    style={[
+                      tw('flex-1 text-[11px] text-[#111827]'),
+                      { fontFamily: BOLD }
+                    ]}
                   >
                     {proj?.name ?? ''}
                   </Text>
@@ -175,7 +191,10 @@ export default function ResumeTemplateFive({ formData }: TResumeTemplateProps) {
               <View key={i} style={tw('mb-2')} wrap={false}>
                 <View style={tw('flex flex-row items-baseline gap-3')}>
                   <Text
-                    style={tw('flex-1 text-[11px] font-bold text-[#111827]')}
+                    style={[
+                      tw('flex-1 text-[11px] text-[#111827]'),
+                      { fontFamily: BOLD }
+                    ]}
                   >
                     {edu?.degree ?? ''}
                     {edu?.field ? ` in ${edu.field}` : ''}

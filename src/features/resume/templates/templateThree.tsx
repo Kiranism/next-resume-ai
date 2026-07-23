@@ -17,6 +17,8 @@ const tw = createTw({
   }
 });
 
+const BOLD = 'Helvetica-Bold';
+
 type TResumeTemplateProps = {
   formData: TResumeEditFormValues;
 };
@@ -30,9 +32,10 @@ const dateRange = (start?: string, end?: string) => {
 
 const Heading = ({ children }: { children: string }) => (
   <Text
-    style={tw(
-      'text-[11px] font-bold text-accent uppercase tracking-[1px] mb-2'
-    )}
+    style={[
+      tw('text-[11px] text-accent uppercase tracking-[1px] mb-2'),
+      { fontFamily: BOLD }
+    ]}
     minPresenceAhead={28}
   >
     {children}
@@ -78,7 +81,12 @@ export default function ResumeTemplateThree({
       <Page size='A4' style={tw('px-10 py-9 bg-background text-primary')}>
         {/* Header */}
         <View style={tw('border-b border-secondary pb-3 mb-4')}>
-          <Text style={tw('text-[26px] font-bold text-primary leading-none')}>
+          <Text
+            style={[
+              tw('text-[26px] text-primary leading-none'),
+              { fontFamily: BOLD }
+            ]}
+          >
             {pd?.fname ?? 'First Name'} {pd?.lname ?? 'Last Name'}
           </Text>
           {pd?.resume_job_title ? (
@@ -121,9 +129,10 @@ export default function ResumeTemplateThree({
                     <View key={i} wrap={false} style={tw('mb-2.5')}>
                       <View style={tw('flex flex-row items-baseline gap-3')}>
                         <Text
-                          style={tw(
-                            'flex-1 text-[11px] font-bold text-primary'
-                          )}
+                          style={[
+                            tw('flex-1 text-[11px] text-primary'),
+                            { fontFamily: BOLD }
+                          ]}
                         >
                           {job?.jobTitle ?? ''}
                           {job?.employer ? ` · ${job.employer}` : ''}
@@ -159,9 +168,10 @@ export default function ResumeTemplateThree({
                     <View key={i} wrap={false} style={tw('mb-2.5')}>
                       <View style={tw('flex flex-row items-baseline gap-3')}>
                         <Text
-                          style={tw(
-                            'flex-1 text-[11px] font-bold text-primary'
-                          )}
+                          style={[
+                            tw('flex-1 text-[11px] text-primary'),
+                            { fontFamily: BOLD }
+                          ]}
                         >
                           {proj?.name ?? ''}
                         </Text>
@@ -196,9 +206,10 @@ export default function ResumeTemplateThree({
                     <View key={i} wrap={false} style={tw('mb-2.5')}>
                       <View style={tw('flex flex-row items-baseline gap-3')}>
                         <Text
-                          style={tw(
-                            'flex-1 text-[11px] font-bold text-primary'
-                          )}
+                          style={[
+                            tw('flex-1 text-[11px] text-primary'),
+                            { fontFamily: BOLD }
+                          ]}
                         >
                           {edu?.degree ?? ''}
                           {edu?.field ? ` in ${edu.field}` : ''}

@@ -18,6 +18,8 @@ const tw = createTw({
   }
 });
 
+const BOLD = 'Helvetica-Bold';
+
 type TResumeTemplateProps = {
   formData: TResumeEditFormValues;
 };
@@ -25,7 +27,9 @@ type TResumeTemplateProps = {
 const SectionTitle = ({ children }: { children: ReactNode }) => (
   // minPresenceAhead keeps a header from being orphaned at the bottom of a page.
   <View style={tw('border-b border-accent mb-2 pb-1')} minPresenceAhead={24}>
-    <Text style={tw('text-base font-bold text-primary')}>{children}</Text>
+    <Text style={[tw('text-base text-primary'), { fontFamily: BOLD }]}>
+      {children}
+    </Text>
   </View>
 );
 
@@ -64,7 +68,12 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
       <Page size='A4' style={tw('px-12 py-10')}>
         {/* Header */}
         <View style={tw('mb-5 text-center')}>
-          <Text style={tw('text-[26px] font-bold text-primary leading-none')}>
+          <Text
+            style={[
+              tw('text-[26px] text-primary leading-none'),
+              { fontFamily: BOLD }
+            ]}
+          >
             {pd?.fname ?? ''} {pd?.lname ?? ''}
           </Text>
           {pd?.resume_job_title ? (
@@ -105,7 +114,10 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
                 <View key={index} wrap={false} style={tw('mb-3')}>
                   <View style={tw('flex flex-row items-baseline gap-3')}>
                     <Text
-                      style={tw('flex-1 text-[11px] font-bold text-primary')}
+                      style={[
+                        tw('flex-1 text-[11px] text-primary'),
+                        { fontFamily: BOLD }
+                      ]}
                     >
                       {job?.employer ?? ''}
                     </Text>
@@ -144,7 +156,10 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
                 <View key={index} wrap={false} style={tw('mb-3')}>
                   <View style={tw('flex flex-row items-baseline gap-3')}>
                     <Text
-                      style={tw('flex-1 text-[11px] font-bold text-primary')}
+                      style={[
+                        tw('flex-1 text-[11px] text-primary'),
+                        { fontFamily: BOLD }
+                      ]}
                     >
                       {proj?.name ?? ''}
                     </Text>
@@ -189,7 +204,10 @@ export default function TemplateFour({ formData }: TResumeTemplateProps) {
                 <View key={index} wrap={false} style={tw('mb-2')}>
                   <View style={tw('flex flex-row items-baseline gap-3')}>
                     <Text
-                      style={tw('flex-1 text-[11px] font-bold text-primary')}
+                      style={[
+                        tw('flex-1 text-[11px] text-primary'),
+                        { fontFamily: BOLD }
+                      ]}
                     >
                       {edu?.degree ?? ''}
                       {edu?.field ? ` in ${edu.field}` : ''}
