@@ -59,7 +59,11 @@ const chatResponseSchema = z.object({
   // Explicit deletions, keyed by section → the item(s) to remove (by identity).
   // The ONLY channel that deletes data — omission never does (see
   // mergeArrayById) — so an accidental drop can't destroy a list.
-  remove: z.record(z.string(), z.array(z.any())).nullable().catch(null)
+  remove: z.record(z.string(), z.array(z.any())).nullable().catch(null),
+  // Section visibility — arrays of section names to hide from / show on the
+  // rendered resume (mirrors the form's eye toggle → hiddenSections).
+  hide: z.array(z.string()).nullable().catch(null),
+  show: z.array(z.string()).nullable().catch(null)
 });
 
 type PersonalDetails = NonNullable<TResumeEditFormValues['personal_details']>;
@@ -216,6 +220,30 @@ function applyRemovals(
   if (!remove) return [];
   const m = merged as unknown as Record<string, unknown>;
   const removedFrom: string[] = [];
+
+  // Clearing personal details: remove.personal_details is an array of FIELD
+  // names to blank (e.g. ["linkedin"]) — the only way chat clears a field the
+  // edit-overlay otherwise refuses to empty.
+  const pdFields = remove.personal_details;
+  if (Array.isArray(pdFields) && pdFields.length > 0) {
+    const details: Record<string, unknown> = {
+      ...(merged.personal_details ?? {})
+    };
+    let cleared = false;
+    for (const field of pdFields) {
+      const f = String(field).trim();
+      if (f && f in details) {
+        details[f] = '';
+        cleared = true;
+      }
+    }
+    if (cleared) {
+      merged.personal_details =
+        details as TResumeEditFormValues['personal_details'];
+      removedFrom.push('personal_details');
+    }
+  }
+
   for (const section of LIST_SECTIONS) {
     const entries = remove[section];
     const arr = m[section];
@@ -248,6 +276,61 @@ function applyRemovals(
   return removedFrom;
 }
 
+// Canonical hiddenSections keys (the form uses "experience" for the jobs
+// section, "summary" for the summary, etc.).
+const VISIBILITY_KEYS = [
+  'summary',
+  'experience',
+  'education',
+  'projects',
+  'skills',
+  'tools',
+  'languages'
+];
+
+// Map a section name the model might use onto the canonical hiddenSections key.
+function normalizeSectionKey(raw: unknown): string | null {
+  const k = String(raw ?? '')
+    .trim()
+    .toLowerCase();
+  const alias: Record<string, string> = {
+    jobs: 'experience',
+    work: 'experience',
+    'work experience': 'experience',
+    'professional summary': 'summary',
+    educations: 'education',
+    project: 'projects',
+    skill: 'skills',
+    tool: 'tools',
+    language: 'languages'
+  };
+  const key = alias[k] ?? k;
+  return VISIBILITY_KEYS.includes(key) ? key : null;
+}
+
+// Hide/show sections by editing hiddenSections (the same array the form's eye
+// toggle writes). Additive + explicit: only the named sections move.
+function applyVisibility(
+  merged: TResumeEditFormValues,
+  hide: unknown,
+  show: unknown
+): boolean {
+  const hideArr = Array.isArray(hide) ? hide : [];
+  const showArr = Array.isArray(show) ? show : [];
+  if (hideArr.length === 0 && showArr.length === 0) return false;
+  const hidden = new Set(merged.hiddenSections ?? []);
+  for (const raw of hideArr) {
+    const key = normalizeSectionKey(raw);
+    if (key) hidden.add(key);
+  }
+  for (const raw of showArr) {
+    const key = normalizeSectionKey(raw);
+    if (key) hidden.delete(key);
+  }
+  merged.hiddenSections = [...hidden];
+  return true;
+}
+
 function resumeForPrompt(resume: TResumeEditFormValues) {
   return {
     personal_details: resume.personal_details ?? {},
@@ -256,7 +339,8 @@ function resumeForPrompt(resume: TResumeEditFormValues) {
     projects: resume.projects ?? [],
     skills: resume.skills ?? [],
     tools: resume.tools ?? [],
-    languages: resume.languages ?? []
+    languages: resume.languages ?? [],
+    hiddenSections: resume.hiddenSections ?? []
   };
 }
 
@@ -363,7 +447,7 @@ Rules:
 
 Respond with a SINGLE valid JSON object and NOTHING else — no markdown, no code
 fences, no text before or after:
-{"reply":"a short friendly 1-3 sentence reply — what you changed, or an answer to the user's question","changes":["one short bullet per concrete change"],"updatedResume": the sections you changed OR null,"remove": items to delete OR null}
+{"reply":"a short friendly 1-3 sentence reply — what you changed, or an answer to the user's question","changes":["one short bullet per concrete change"],"updatedResume": the sections you changed OR null,"remove": items to delete OR null,"hide": section names to hide OR null,"show": section names to reveal OR null}
 
 Field rules:
 - "reply": always present; shown to the user as plain text.
@@ -385,6 +469,14 @@ Field rules:
   Deletion happens ONLY through "remove" — leaving an item out of "updatedResume"
   never deletes it. Never remove anything the user did not clearly ask to remove.
   Use null when deleting nothing.
+- To CLEAR a personal detail (e.g. "remove my LinkedIn"), list its field name(s)
+  under remove.personal_details — e.g. {"personal_details":["linkedin","website"]}.
+  (Editing a field to a new value still goes in updatedResume.personal_details.)
+- "hide" / "show": ONLY when the user asks to hide or reveal a whole section. Each
+  is an array of section names drawn from exactly: "summary", "experience" (the
+  work-experience section), "education", "projects", "skills", "tools",
+  "languages". e.g. hide:["education"] removes Education from the rendered resume;
+  show:["projects"] brings it back. Use null for each when not changing visibility.
 
 Section shapes for updatedResume (include only the ones you changed):
 {"personal_details":{"resume_job_title":"","fname":"","lname":"","email":"","phone":"","country":"","city":"","summary":"","linkedin":"","github":"","website":""},"jobs":[{"id":0,"jobTitle":"","employer":"","description":"","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","city":""}],"educations":[{"id":0,"school":"","degree":"","field":"","description":"","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","city":""}],"projects":[{"name":"","description":"","link":""}],"skills":[{"skill_name":"","proficiency_level":""}],"tools":[{"tool_name":"","proficiency_level":""}],"languages":[{"lang_name":"","proficiency_level":""}]}
@@ -488,9 +580,12 @@ export function parseChatEdit(
   const hasEdit = !!parsed.data.updatedResume;
   const hasRemoval =
     !!parsed.data.remove && Object.keys(parsed.data.remove).length > 0;
+  const hasVisibility =
+    (Array.isArray(parsed.data.hide) && parsed.data.hide.length > 0) ||
+    (Array.isArray(parsed.data.show) && parsed.data.show.length > 0);
 
-  // Neither an edit nor a deletion → plain reply, resume untouched.
-  if (!hasEdit && !hasRemoval) {
+  // No edit, deletion, or visibility change → plain reply, resume untouched.
+  if (!hasEdit && !hasRemoval && !hasVisibility) {
     return { reply, changes: parsed.data.changes, updatedResume: null };
   }
 
@@ -502,6 +597,7 @@ export function parseChatEdit(
     : { merged: { ...currentResume }, skipped: [] as string[] };
 
   applyRemovals(merged, parsed.data.remove);
+  applyVisibility(merged, parsed.data.hide, parsed.data.show);
 
   const changes = [...parsed.data.changes];
   if (skipped.length > 0) {
