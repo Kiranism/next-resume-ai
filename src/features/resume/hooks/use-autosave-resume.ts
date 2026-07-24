@@ -28,6 +28,11 @@ export function useAutosaveResume(
 
   const lastSavedRef = useRef<string | null>(null);
   const dataTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // In-flight guard: never let two saves race (a slow save could otherwise land
+  // AFTER a newer one and clobber it). If a change arrives mid-save, remember it
+  // and re-run once the current save settles.
+  const inFlightRef = useRef(false);
+  const pendingRef = useRef(false);
 
   // Writes the current form values (skips only if unchanged since last save).
   const persist = async () => {
@@ -37,14 +42,41 @@ export function useAutosaveResume(
     const key = JSON.stringify(values);
     if (key === lastSavedRef.current) return; // nothing changed since last save
 
+    if (inFlightRef.current) {
+      pendingRef.current = true; // save the latest state after this one finishes
+      return;
+    }
+
+    inFlightRef.current = true;
     setState('saving');
+    // Retry a few times so a transient network/DB blip doesn't SILENTLY drop a
+    // change — the failure mode where a deleted item reappears on refresh
+    // because its save never landed.
     try {
-      await updateResume({ id: values.resume_id, ...values });
-      lastSavedRef.current = key;
-      setState('saved');
-    } catch (error) {
-      console.error('Autosave failed:', error);
-      setState('error');
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          await updateResume({ id: values.resume_id, ...values });
+          lastSavedRef.current = key;
+          setState('saved');
+          break;
+        } catch (error) {
+          if (attempt === 2) {
+            console.error('Autosave failed after 3 attempts:', error);
+            setState('error');
+          } else {
+            await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+          }
+        }
+      }
+    } finally {
+      inFlightRef.current = false;
+    }
+
+    // A change (e.g. another delete) landed while we were saving — persist the
+    // latest values now so nothing is left unsaved.
+    if (pendingRef.current) {
+      pendingRef.current = false;
+      void persist();
     }
   };
   // Latest-closure ref so the once-only watch subscription always runs current

@@ -1,4 +1,5 @@
-import { Control, useFieldArray } from 'react-hook-form';
+import { Control } from 'react-hook-form';
+import { useResumeSection } from '../hooks/use-resume-section';
 import { Button } from '@/components/ui/button';
 import {
   FormControl,
@@ -24,27 +25,18 @@ interface SkillsProps {
 }
 
 export const Skills = ({ control }: SkillsProps) => {
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: 'skills'
-  });
+  const { fields, add, removeItem } = useResumeSection(
+    'skills',
+    'Skill',
+    () => ({ skill_name: '', proficiency_level: 'beginner' })
+  );
 
   return (
     <SectionShell
       title='Skills'
       sectionKey='skills'
       action={
-        <Button
-          type='button'
-          variant='outline'
-          size='sm'
-          onClick={() =>
-            append({
-              skill_name: '',
-              proficiency_level: 'beginner'
-            })
-          }
-        >
+        <Button type='button' variant='outline' size='sm' onClick={add}>
           <PlusCircle className='mr-2 h-4 w-4' />
           Add Skill
         </Button>
@@ -101,7 +93,7 @@ export const Skills = ({ control }: SkillsProps) => {
               type='button'
               variant='ghost'
               size='icon'
-              onClick={() => remove(index)}
+              onClick={() => removeItem(index)}
             >
               <Trash2 className='h-4 w-4' />
             </Button>

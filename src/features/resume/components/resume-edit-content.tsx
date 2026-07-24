@@ -105,7 +105,7 @@ export function ResumeEditContent({ resume }: ResumeEditContentProps) {
   // Extract content rendering logic
   const renderContent = () => {
     if (mode === 'edit') {
-      return <EditResumeForm form={form} />;
+      return <EditResumeForm form={form} saveNow={saveNow} />;
     }
     if (mode === 'template') {
       return (

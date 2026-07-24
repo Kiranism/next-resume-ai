@@ -1,4 +1,5 @@
-import { Control, useFieldArray } from 'react-hook-form';
+import { Control } from 'react-hook-form';
+import { useResumeSection } from '../hooks/use-resume-section';
 import { Button } from '@/components/ui/button';
 import {
   FormControl,
@@ -18,32 +19,26 @@ interface EducationProps {
 }
 
 export const Education = ({ control }: EducationProps) => {
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: 'educations'
-  });
+  const { fields, add, removeItem } = useResumeSection(
+    'educations',
+    'Education',
+    () => ({
+      school: '',
+      degree: '',
+      field: '',
+      description: '',
+      startDate: '',
+      endDate: '',
+      city: ''
+    })
+  );
 
   return (
     <SectionShell
       title='Education'
       sectionKey='education'
       action={
-        <Button
-          type='button'
-          variant='outline'
-          size='sm'
-          onClick={() =>
-            append({
-              school: '',
-              degree: '',
-              field: '',
-              description: '',
-              startDate: '',
-              endDate: '',
-              city: ''
-            })
-          }
-        >
+        <Button type='button' variant='outline' size='sm' onClick={add}>
           <PlusCircle className='mr-2 h-4 w-4' />
           Add Education
         </Button>
@@ -60,7 +55,7 @@ export const Education = ({ control }: EducationProps) => {
                 type='button'
                 variant='ghost'
                 size='sm'
-                onClick={() => remove(index)}
+                onClick={() => removeItem(index)}
               >
                 <Trash2 className='h-4 w-4' />
               </Button>

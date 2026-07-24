@@ -1,4 +1,5 @@
-import { Control, useFieldArray } from 'react-hook-form';
+import { Control } from 'react-hook-form';
+import { useResumeSection } from '../hooks/use-resume-section';
 import { Button } from '@/components/ui/button';
 import {
   FormControl,
@@ -24,27 +25,18 @@ interface LanguagesProps {
 }
 
 export const Languages = ({ control }: LanguagesProps) => {
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: 'languages'
-  });
+  const { fields, add, removeItem } = useResumeSection(
+    'languages',
+    'Language',
+    () => ({ lang_name: '', proficiency_level: 'beginner' })
+  );
 
   return (
     <SectionShell
       title='Languages'
       sectionKey='languages'
       action={
-        <Button
-          type='button'
-          variant='outline'
-          size='sm'
-          onClick={() =>
-            append({
-              lang_name: '',
-              proficiency_level: 'beginner'
-            })
-          }
-        >
+        <Button type='button' variant='outline' size='sm' onClick={add}>
           <PlusCircle className='mr-2 h-4 w-4' />
           Add Language
         </Button>
@@ -101,7 +93,7 @@ export const Languages = ({ control }: LanguagesProps) => {
               type='button'
               variant='ghost'
               size='icon'
-              onClick={() => remove(index)}
+              onClick={() => removeItem(index)}
             >
               <Trash2 className='h-4 w-4' />
             </Button>

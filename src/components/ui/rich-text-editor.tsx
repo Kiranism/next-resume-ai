@@ -33,6 +33,13 @@ export function RichTextEditor({
   // setContent — would reset the cursor) apart from "value changed
   // externally, e.g. AI chat's setValue" (do setContent).
   const lastEmitted = React.useRef(value);
+  // Tiptap's useEditor captures its onUpdate closure ONCE at editor creation, so
+  // a bare `onChange` call would stay bound to whatever array index this field
+  // had on first render. After a useFieldArray remove/reorder shifts indices,
+  // that stale onChange writes back to the OLD index — resurrecting a deleted
+  // entry. Route through a ref so onUpdate always targets the CURRENT field.
+  const onChangeRef = React.useRef(onChange);
+  onChangeRef.current = onChange;
   const [isEmpty, setIsEmpty] = React.useState(() => value.trim().length === 0);
 
   const editor = useEditor({
@@ -64,7 +71,7 @@ export function RichTextEditor({
       const next = docToRichText(editor.getJSON());
       lastEmitted.current = next;
       setIsEmpty(editor.isEmpty);
-      onChange(next);
+      onChangeRef.current(next);
     }
   });
 

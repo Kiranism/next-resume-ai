@@ -1,4 +1,5 @@
-import { Control, useFieldArray } from 'react-hook-form';
+import { Control } from 'react-hook-form';
+import { useResumeSection } from '../hooks/use-resume-section';
 import { Button } from '@/components/ui/button';
 import {
   FormControl,
@@ -18,22 +19,18 @@ interface ProjectsProps {
 }
 
 export function Projects({ control }: ProjectsProps) {
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: 'projects'
-  });
+  const { fields, add, removeItem } = useResumeSection(
+    'projects',
+    'Project',
+    () => ({ name: '', description: '', link: '' })
+  );
 
   return (
     <SectionShell
       title='Projects'
       sectionKey='projects'
       action={
-        <Button
-          type='button'
-          variant='outline'
-          size='sm'
-          onClick={() => append({ name: '', description: '', link: '' })}
-        >
+        <Button type='button' variant='outline' size='sm' onClick={add}>
           <PlusCircle className='mr-2 h-4 w-4' />
           Add Project
         </Button>
@@ -50,7 +47,7 @@ export function Projects({ control }: ProjectsProps) {
                 type='button'
                 variant='ghost'
                 size='sm'
-                onClick={() => remove(index)}
+                onClick={() => removeItem(index)}
               >
                 <Trash2 className='h-4 w-4' />
               </Button>
