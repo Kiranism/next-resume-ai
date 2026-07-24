@@ -59,12 +59,69 @@ const chatResponseSchema = z.object({
 
 type PersonalDetails = NonNullable<TResumeEditFormValues['personal_details']>;
 
-// Conservative section-level merge. The model returns a full resume; we only let
-// a section overwrite the current one when it is safe:
+// Identity key for matching an incoming (edited/added) item to an existing one.
+// Case-insensitive + trimmed so an edit that keeps the identifying field(s) but
+// changes other fields still matches its original. An empty key means "no stable
+// identity" → the item is treated as new (appended), never overwriting anything.
+function itemKey(section: string, item: Record<string, unknown>): string {
+  const s = (v: unknown) =>
+    String(v ?? '')
+      .trim()
+      .toLowerCase();
+  switch (section) {
+    case 'jobs':
+      return `${s(item.employer)}|${s(item.jobTitle)}|${s(item.startDate)}`;
+    case 'educations':
+      return `${s(item.school)}|${s(item.degree)}|${s(item.startDate)}`;
+    case 'projects':
+      return s(item.name);
+    case 'skills':
+      return s(item.skill_name);
+    case 'tools':
+      return s(item.tool_name);
+    case 'languages':
+      return s(item.lang_name);
+    default:
+      return '';
+  }
+}
+
+// Upsert the model's returned items into the current list WITHOUT dropping items
+// it didn't return. This is the fix for the data-loss bug: the model only has to
+// return the item(s) it changed, and matched items are replaced in place while
+// every unreturned item is preserved. Result length is always >= current, so a
+// chat edit can never silently delete an entry.
+function mergeArrayById<T>(current: T[], incoming: T[], section: string): T[] {
+  const keyOf = (item: T) =>
+    itemKey(section, item as unknown as Record<string, unknown>);
+  const result: T[] = [...current];
+  const indexByKey = new Map<string, number>();
+  result.forEach((item, i) => {
+    const k = keyOf(item);
+    if (k && !indexByKey.has(k)) indexByKey.set(k, i);
+  });
+  for (const item of incoming) {
+    const k = keyOf(item);
+    const at = k ? indexByKey.get(k) : undefined;
+    if (at !== undefined) {
+      result[at] = item; // edit of an existing entry → replace in place
+    } else {
+      result.push(item); // genuinely new entry → append
+      if (k) indexByKey.set(k, result.length - 1);
+    }
+  }
+  return result;
+}
+
+// Section-level merge. The model returns only the sections it changed, and within
+// a list section only the ITEMS it changed/added — so we upsert by identity
+// (mergeArrayById) instead of blindly replacing the array. This prevents the
+// data-loss bug where editing one project/job wiped out the others just because
+// the model didn't echo them back.
 //  - personal_details: overlay provided string fields (can't blank existing).
-//  - skills/tools/languages: replace whenever the model returns an array.
-//  - jobs/educations: replace ONLY if EVERY item passes strict validation, so
-//    chat can never corrupt structured, date-bearing work history.
+//  - jobs/educations/projects: validate incoming items strictly, then upsert by
+//    identity (matched replaced, new appended, omitted preserved).
+//  - skills/tools/languages: lenient parse, then the same identity upsert.
 function mergeResume(
   current: TResumeEditFormValues,
   ai: Record<string, unknown>
@@ -86,28 +143,46 @@ function mergeResume(
   }
 
   if (Array.isArray(ai.skills)) {
-    merged.skills = z.array(skillItem).catch([]).parse(ai.skills);
+    const incoming = z.array(skillItem).catch([]).parse(ai.skills);
+    merged.skills = mergeArrayById(current.skills ?? [], incoming, 'skills');
   }
   if (Array.isArray(ai.tools)) {
-    merged.tools = z.array(toolItem).catch([]).parse(ai.tools);
+    const incoming = z.array(toolItem).catch([]).parse(ai.tools);
+    merged.tools = mergeArrayById(current.tools ?? [], incoming, 'tools');
   }
   if (Array.isArray(ai.languages)) {
-    merged.languages = z.array(languageItem).catch([]).parse(ai.languages);
+    const incoming = z.array(languageItem).catch([]).parse(ai.languages);
+    merged.languages = mergeArrayById(
+      current.languages ?? [],
+      incoming,
+      'languages'
+    );
   }
 
   if (Array.isArray(ai.jobs)) {
     const parsed = z.array(jobSchema).safeParse(ai.jobs);
-    if (parsed.success) merged.jobs = parsed.data;
+    if (parsed.success)
+      merged.jobs = mergeArrayById(current.jobs ?? [], parsed.data, 'jobs');
     else skipped.push('work experience');
   }
   if (Array.isArray(ai.educations)) {
     const parsed = z.array(educationSchema).safeParse(ai.educations);
-    if (parsed.success) merged.educations = parsed.data;
+    if (parsed.success)
+      merged.educations = mergeArrayById(
+        current.educations ?? [],
+        parsed.data,
+        'educations'
+      );
     else skipped.push('education');
   }
   if (Array.isArray(ai.projects)) {
     const parsed = z.array(projectSchema).safeParse(ai.projects);
-    if (parsed.success) merged.projects = parsed.data;
+    if (parsed.success)
+      merged.projects = mergeArrayById(
+        current.projects ?? [],
+        parsed.data,
+        'projects'
+      );
     else skipped.push('projects');
   }
 
@@ -184,8 +259,13 @@ Field rules:
 - "updatedResume": include ONLY the sections you actually changed — omit every
   section you did NOT touch (they are preserved automatically). Use null when you
   made no edits (e.g. the user only asked a question).
-- When you change any part of a section, return that whole section (e.g. to edit
-  one project, return the full "projects" array with every project).
+- For list sections (jobs, educations, projects, skills, tools, languages),
+  return ONLY the items you ADDED or CHANGED — never resend the whole list. Items
+  you leave out are preserved automatically. Keep each changed item's identifying
+  field(s) EXACTLY unchanged so it matches the existing entry: projects by
+  "name"; jobs by "employer" + "jobTitle" + "startDate"; educations by "school" +
+  "degree" + "startDate"; skills by "skill_name"; tools by "tool_name"; languages
+  by "lang_name". Give a brand-new item a new identifying value.
 
 Section shapes for updatedResume (include only the ones you changed):
 {"personal_details":{"resume_job_title":"","fname":"","lname":"","email":"","phone":"","country":"","city":"","summary":"","linkedin":"","github":"","website":""},"jobs":[{"id":0,"jobTitle":"","employer":"","description":"","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","city":""}],"educations":[{"id":0,"school":"","degree":"","field":"","description":"","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","city":""}],"projects":[{"name":"","description":"","link":""}],"skills":[{"skill_name":"","proficiency_level":""}],"tools":[{"tool_name":"","proficiency_level":""}],"languages":[{"lang_name":"","proficiency_level":""}]}
