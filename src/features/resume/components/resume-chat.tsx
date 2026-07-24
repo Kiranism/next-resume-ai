@@ -59,14 +59,14 @@ const GREETING: ChatUiMessage = {
   id: 'greeting',
   role: 'assistant',
   content:
-    "Hi! I'm your resume assistant. Tell me what to improve and I'll edit your resume live — try “make my summary more ATS-friendly” or “add skills for this role”. You can also check your ATS score above."
+    "Hi! I'm your resume assistant — I can do anything the editor can: add, rewrite, or delete experience, projects, and skills, hide or show sections, even clear a field. Try “add a project”, “delete my oldest job”, or “hide my education section”. Tip: type @ to point an edit at one specific item, or check your ATS score above."
 };
 
 const SUGGESTIONS = [
   'Make my resume ATS-friendly',
   'Rewrite my professional summary',
-  'Improve my experience bullets',
-  'Suggest skills for this job'
+  'Hide my education section',
+  'Suggest skills for this role'
 ];
 
 function createId() {
