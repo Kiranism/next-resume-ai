@@ -159,7 +159,8 @@ export async function generateResumeContent(
   `;
 
   try {
-    const responseText = await generateJsonContent(prompt);
+    // Creation is a rare, quality-defining call — writing tier.
+    const responseText = await generateJsonContent(prompt, { tier: 'writing' });
 
     // Validate + normalize the model's JSON with zod so a malformed field
     // (e.g. a non-array skills value) can never crash the DB insert.

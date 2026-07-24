@@ -114,7 +114,8 @@ CLERK_SECRET_KEY=sk_...
 
 # AI (OpenRouter)
 OPENROUTER_API_KEY=sk-or-...
-OPENROUTER_MODEL=openai/gpt-4o-mini   # optional; this is the default
+OPENROUTER_MODEL=anthropic/claude-haiku-4.5           # optional; fast tier default
+OPENROUTER_MODEL_WRITING=anthropic/claude-sonnet-4.5  # optional; writing tier default
 
 # App
 NEXT_PUBLIC_API_URL=http://localhost:3000
@@ -152,7 +153,7 @@ Yes. Add a job description, company, and role, and the AI rewrites your content 
 
 ### Which AI model does CVTailor use?
 
-CVTailor calls models through OpenRouter, so you can use any supported model. The default is `openai/gpt-4o-mini`, set with the `OPENROUTER_MODEL` environment variable.
+CVTailor calls models through OpenRouter, so you can use any supported model. There are two tiers: fast (chat edits, ATS analysis, keyword extraction — default `anthropic/claude-haiku-4.5`, env `OPENROUTER_MODEL`) and writing (resume creation and the writing critique — default `anthropic/claude-sonnet-4.5`, env `OPENROUTER_MODEL_WRITING`).
 
 ### Can I self-host CVTailor?
 

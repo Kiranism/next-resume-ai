@@ -1,8 +1,35 @@
 // AI text generation via OpenRouter (OpenAI-compatible chat completions).
-// One request per call (stateless). Model configurable with OPENROUTER_MODEL.
-export async function generateJsonContent(prompt: string): Promise<string> {
+// One request per call (stateless).
+//
+// Two model tiers, both env-overridable (switch models without a deploy):
+//  - 'fast'    (default) — high-frequency calls: chat edits, ATS analysis,
+//    keyword extraction. Env: OPENROUTER_MODEL.
+//  - 'writing' — the rare, quality-defining calls: resume creation and the
+//    writing critique, where prose quality IS the product. Env:
+//    OPENROUTER_MODEL_WRITING (falls back to the fast tier when unset).
+export type ModelTier = 'fast' | 'writing';
+
+const DEFAULT_FAST_MODEL = 'anthropic/claude-haiku-4.5';
+const DEFAULT_WRITING_MODEL = 'anthropic/claude-sonnet-4.5';
+
+function resolveModel(tier: ModelTier): string {
+  const fast = process.env.OPENROUTER_MODEL?.trim();
+  if (tier === 'writing') {
+    return (
+      process.env.OPENROUTER_MODEL_WRITING?.trim() ||
+      fast ||
+      DEFAULT_WRITING_MODEL
+    );
+  }
+  return fast || DEFAULT_FAST_MODEL;
+}
+
+export async function generateJsonContent(
+  prompt: string,
+  opts?: { tier?: ModelTier }
+): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
-  const model = process.env.OPENROUTER_MODEL?.trim() || 'openai/gpt-4o-mini';
+  const model = resolveModel(opts?.tier ?? 'fast');
 
   if (!apiKey) {
     throw new Error(
@@ -62,7 +89,8 @@ export async function streamChatCompletion(
   onToken: (delta: string) => void
 ): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
-  const model = process.env.OPENROUTER_MODEL?.trim() || 'openai/gpt-4o-mini';
+  // Chat is the high-frequency, latency-sensitive path → fast tier.
+  const model = resolveModel('fast');
 
   if (!apiKey) {
     throw new Error(

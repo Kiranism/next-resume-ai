@@ -20,9 +20,7 @@ function bulletId(section: 'jobs' | 'projects', item: number, b: number) {
   return `${section === 'jobs' ? 'j' : 'p'}${item}.${b}`;
 }
 
-function parseBulletId(
-  id: string
-): {
+function parseBulletId(id: string): {
   section: 'jobs' | 'projects';
   itemIndex: number;
   bulletIndex: number;
@@ -203,7 +201,7 @@ Return ONLY this JSON object and nothing else:
 Omit "summary" if the summary is already strong or empty.`;
 
   try {
-    const raw = await generateJsonContent(prompt);
+    const raw = await generateJsonContent(prompt, { tier: 'writing' });
     let parsed: AiCritique = {};
     try {
       parsed = JSON.parse(raw) as AiCritique;
