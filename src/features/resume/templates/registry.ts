@@ -1,19 +1,16 @@
 import { ComponentType } from 'react';
 import { Font } from '@react-pdf/renderer';
 import { TResumeEditFormValues } from '../utils/form-schema';
-import TemplateOne from './templateOne';
+import TemplateNine from './templateNine';
+import TemplateFour from './templateFour';
+import TemplateFive from './templateFive';
+import TemplateSix from './templateSix';
+import TemplateEight from './templateEight';
 
 // Disable hyphenation across all resume PDFs — mid-word hyphens (and stray
 // hyphens where separators wrap) look unprofessional on a resume. Words wrap
 // whole instead. Runs once when the registry (and thus the renderer) loads.
 Font.registerHyphenationCallback((word) => [word]);
-import TemplateTwo from './templateTwo';
-import TemplateThree from './templateThree';
-import TemplateFour from './templateFour';
-import TemplateFive from './templateFive';
-import TemplateSix from './templateSix';
-import TemplateSeven from './templateSeven';
-import TemplateEight from './templateEight';
 
 export type ResumeTemplateProps = {
   formData: TResumeEditFormValues;
@@ -27,9 +24,11 @@ export type TemplateConfig = {
   component: ComponentType<ResumeTemplateProps>;
 };
 
-// Order here is the order shown in the picker (getAllTemplates = Object.values).
-// ATS Friendly is first and is the default; ids are unchanged so saved resumes
-// keep pointing at the right template.
+// Only ATS-friendly single-column layouts are offered. Order here is the order
+// shown in the picker (getAllTemplates = Object.values). ATS Friendly is first
+// and is the default.
+const DEFAULT_TEMPLATE_ID = 'template-five';
+
 const templateRegistry: Record<string, TemplateConfig> = {
   'template-five': {
     id: 'template-five',
@@ -39,6 +38,14 @@ const templateRegistry: Record<string, TemplateConfig> = {
       'Single-column, parser-safe layout optimized for ATS keyword scanning',
     component: TemplateFive
   },
+  'template-nine': {
+    id: 'template-nine',
+    name: 'Modern Teal',
+    thumbnail: '/templates/template-nine.png',
+    description:
+      'Centered header with teal accents, ruled section headers, and label-value skills',
+    component: TemplateNine
+  },
   'template-six': {
     id: 'template-six',
     name: 'Executive Blue',
@@ -46,13 +53,6 @@ const templateRegistry: Record<string, TemplateConfig> = {
     description:
       'Single-column with blue accent headings, ideal for senior roles',
     component: TemplateSix
-  },
-  'template-seven': {
-    id: 'template-seven',
-    name: 'Classic Timeline',
-    thumbnail: '/templates/template-seven.png',
-    description: 'Centered header with a left label column and ruled sections',
-    component: TemplateSeven
   },
   'template-eight': {
     id: 'template-eight',
@@ -67,32 +67,13 @@ const templateRegistry: Record<string, TemplateConfig> = {
     thumbnail: '/templates/template-four.png',
     description: 'Modern design with creative layout and color accents',
     component: TemplateFour
-  },
-  'template-one': {
-    id: 'template-one',
-    name: 'Professional Split',
-    thumbnail: '/templates/template-one.png',
-    description: 'Classic two-column layout with a professional look',
-    component: TemplateOne
-  },
-  'template-two': {
-    id: 'template-two',
-    name: 'Modern Clean',
-    thumbnail: '/templates/template-two.png',
-    description: 'Modern single-column design with clean typography',
-    component: TemplateTwo
-  },
-  'template-three': {
-    id: 'template-three',
-    name: 'Minimalist',
-    thumbnail: '/templates/template-three.png',
-    description: 'Clean and minimal design with subtle accents',
-    component: TemplateThree
   }
 };
 
+// Falls back to the default (ATS Friendly) for unknown ids — e.g. a resume saved
+// with a template that has since been removed still renders instead of crashing.
 export const getTemplate = (templateId: string): TemplateConfig => {
-  return templateRegistry[templateId];
+  return templateRegistry[templateId] ?? templateRegistry[DEFAULT_TEMPLATE_ID];
 };
 
 export const getAllTemplates = (): TemplateConfig[] => {

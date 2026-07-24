@@ -71,11 +71,10 @@ const STEPS = [
 ];
 
 const TEMPLATES = [
-  'Professional',
-  'Modern',
-  'Minimalist',
-  'Creative',
-  'ATS-Friendly'
+  'ATS Friendly',
+  'Executive Blue',
+  'Elegant Serif',
+  'Creative Professional'
 ];
 
 const CHAT: { role: 'user' | 'assistant'; text: string; applied?: boolean }[] =

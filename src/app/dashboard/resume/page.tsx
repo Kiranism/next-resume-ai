@@ -3,6 +3,7 @@ import PageContainer from '@/components/layout/page-container';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ProfileFilter } from '@/features/resume/components/profile-filter';
+import { getTemplate } from '@/features/resume/templates/registry';
 import { searchParamsCache, serialize } from '@/lib/searchparams';
 import { db } from '@/server/db';
 import { resumes, accounts } from '@/server/db/schema';
@@ -132,7 +133,7 @@ export default async function ResumePage({
               >
                 <Card className='hover:border-primary relative h-[300px] overflow-hidden p-0 transition-all hover:shadow-md'>
                   <Image
-                    src={`/templates/${resume.templateId ?? 'template-one'}.png`}
+                    src={getTemplate(resume.templateId ?? '').thumbnail}
                     alt={resume.jdJobTitle}
                     fill
                     sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw'

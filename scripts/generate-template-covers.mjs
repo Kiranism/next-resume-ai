@@ -30,13 +30,10 @@ const WIDTH = 1000; // canvas CSS width; height derives from the A4 aspect ratio
 
 // Templates to render → output file name (matches registry `thumbnail` paths).
 const TEMPLATES = [
-  ['template-one', 'templateOne'],
-  ['template-two', 'templateTwo'],
-  ['template-three', 'templateThree'],
+  ['template-nine', 'templateNine'],
   ['template-four', 'templateFour'],
   ['template-five', 'templateFive'],
   ['template-six', 'templateSix'],
-  ['template-seven', 'templateSeven'],
   ['template-eight', 'templateEight']
 ];
 
