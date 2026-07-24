@@ -39,6 +39,9 @@ export interface AtsReport {
   score: number;
   matchedKeywords: string[];
   missingKeywords: string[];
+  // Missing keywords split by importance (optional — older reports may omit them).
+  missingRequired?: string[];
+  missingPreferred?: string[];
   rationale?: string;
   suggestions: string[];
 }

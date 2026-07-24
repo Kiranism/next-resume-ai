@@ -371,9 +371,18 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
 
   const handleApplyAts = (report: AtsReport) => {
     const parts: string[] = [];
-    if (report.missingKeywords.length > 0) {
+    const required = report.missingRequired ?? [];
+    const preferred = report.missingPreferred ?? [];
+    const missing =
+      required.length || preferred.length
+        ? [...required, ...preferred]
+        : report.missingKeywords;
+    if (missing.length > 0) {
+      const reqLine = required.length
+        ? `PRIORITIZE these required keywords: ${required.join(', ')}. `
+        : '';
       parts.push(
-        `Add these keywords using the EXACT terms (verbatim, so an ATS matches them): put technologies/tools in my skills or tools lists where they fit my background, and weave the rest truthfully into my summary and experience bullets — never invent employers, roles, or dates. Keywords: ${report.missingKeywords.join(', ')}.`
+        `Add these keywords using the EXACT terms (verbatim, so an ATS matches them). ${reqLine}Put technologies/tools in my skills or tools lists where they fit my background, and weave the rest truthfully into my summary and experience bullets — never invent employers, roles, or dates. All keywords: ${missing.join(', ')}.`
       );
     }
     if (report.suggestions.length > 0) {
@@ -589,15 +598,15 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
                                     )}
                                 </div>
 
-                                {message.atsReport.missingKeywords.length >
-                                  0 && (
+                                {(message.atsReport.missingRequired?.length ??
+                                  0) > 0 && (
                                   <div className='flex flex-col gap-1'>
                                     <span className='text-foreground font-medium'>
-                                      Missing keywords
+                                      Missing — required
                                     </span>
                                     <div className='flex flex-wrap gap-1'>
-                                      {message.atsReport.missingKeywords
-                                        .slice(0, 12)
+                                      {message.atsReport
+                                        .missingRequired!.slice(0, 12)
                                         .map((keyword, i) => (
                                           <Badge key={i} variant='destructive'>
                                             {keyword}
@@ -606,6 +615,47 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
                                     </div>
                                   </div>
                                 )}
+
+                                {(message.atsReport.missingPreferred?.length ??
+                                  0) > 0 && (
+                                  <div className='flex flex-col gap-1'>
+                                    <span className='text-muted-foreground font-medium'>
+                                      Missing — nice to have
+                                    </span>
+                                    <div className='flex flex-wrap gap-1'>
+                                      {message.atsReport
+                                        .missingPreferred!.slice(0, 10)
+                                        .map((keyword, i) => (
+                                          <Badge key={i} variant='secondary'>
+                                            {keyword}
+                                          </Badge>
+                                        ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {!message.atsReport.missingRequired &&
+                                  !message.atsReport.missingPreferred &&
+                                  message.atsReport.missingKeywords.length >
+                                    0 && (
+                                    <div className='flex flex-col gap-1'>
+                                      <span className='text-foreground font-medium'>
+                                        Missing keywords
+                                      </span>
+                                      <div className='flex flex-wrap gap-1'>
+                                        {message.atsReport.missingKeywords
+                                          .slice(0, 12)
+                                          .map((keyword, i) => (
+                                            <Badge
+                                              key={i}
+                                              variant='destructive'
+                                            >
+                                              {keyword}
+                                            </Badge>
+                                          ))}
+                                      </div>
+                                    </div>
+                                  )}
 
                                 {message.atsReport.suggestions.length > 0 && (
                                   <div className='flex flex-col gap-1'>

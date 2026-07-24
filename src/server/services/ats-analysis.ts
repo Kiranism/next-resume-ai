@@ -5,8 +5,22 @@ export type AtsReport = {
   score: number;
   matchedKeywords: string[];
   missingKeywords: string[];
+  // Missing split by importance (Resume ATS Optimizer criteria) so the UI can
+  // show must-haves separately from nice-to-haves.
+  missingRequired: string[];
+  missingPreferred: string[];
   rationale: string;
   suggestions: string[];
+};
+
+type Importance = 'required' | 'preferred';
+// `present` is the model's semantic judgment (does the resume demonstrate this,
+// synonyms/equivalents included). It is OR'd with the deterministic exact-match
+// during scoring, so a literally-present keyword always counts.
+export type AnalyzedKeyword = {
+  term: string;
+  importance: Importance;
+  present?: boolean;
 };
 
 // Collapse to lowercase alphanumerics so "Next.js", "NextJS", and "next js" all
@@ -50,20 +64,23 @@ function resumeHasKeyword(
   }
 }
 
-type Importance = 'required' | 'preferred';
-type AnalyzedKeyword = { term: string; importance: Importance };
-
-// Score per the Resume ATS Optimizer criteria: the JD's keywords split into
-// REQUIRED (must-have/critical) and PREFERRED (nice-to-have), scored by coverage
-// with required weighted heavily. Presence is checked deterministically, so a
-// keyword that's literally in the resume ALWAYS counts — that's what keeps the
-// analyze→improve→re-analyze loop converging. Exported for unit testing.
+// Score per the Resume ATS Optimizer criteria: keywords split into REQUIRED
+// (must-have/critical) and PREFERRED (nice-to-have), scored by coverage with
+// required weighted heavily. A keyword counts as present if the model judged it
+// present (synonyms) OR it's a literal match — the literal match guarantees the
+// analyze→improve→re-analyze loop converges. Exported for unit testing.
 const PREFERRED_WEIGHT = 0.4;
 
 export function scoreAtsMatch(
   keywords: AnalyzedKeyword[],
   resumeText: string
-): { matchedKeywords: string[]; missingKeywords: string[]; score: number } {
+): {
+  matchedKeywords: string[];
+  missingKeywords: string[];
+  missingRequired: string[];
+  missingPreferred: string[];
+  score: number;
+} {
   const resumeLower = resumeText.toLowerCase();
   const resumeCompact = compact(resumeText);
 
@@ -76,7 +93,8 @@ export function scoreAtsMatch(
     seen.add(c);
     unique.push({
       term,
-      importance: k.importance === 'preferred' ? 'preferred' : 'required'
+      importance: k.importance === 'preferred' ? 'preferred' : 'required',
+      present: k.present === true
     });
   }
   // Required first (Resume ATS Optimizer lists must-haves first).
@@ -86,18 +104,24 @@ export function scoreAtsMatch(
 
   const matchedKeywords: string[] = [];
   const missingKeywords: string[] = [];
+  const missingRequired: string[] = [];
+  const missingPreferred: string[] = [];
   let reqTotal = 0;
   let reqMatched = 0;
   let prefTotal = 0;
   let prefMatched = 0;
   for (const kw of unique) {
-    const present = resumeHasKeyword(kw.term, resumeLower, resumeCompact);
+    const present =
+      kw.present === true ||
+      resumeHasKeyword(kw.term, resumeLower, resumeCompact);
     if (kw.importance === 'required') {
       reqTotal++;
       if (present) reqMatched++;
+      else missingRequired.push(kw.term);
     } else {
       prefTotal++;
       if (present) prefMatched++;
+      else missingPreferred.push(kw.term);
     }
     (present ? matchedKeywords : missingKeywords).push(kw.term);
   }
@@ -106,35 +130,55 @@ export function scoreAtsMatch(
   const denominator = reqTotal + PREFERRED_WEIGHT * prefTotal;
   const score =
     denominator === 0 ? 0 : Math.round((numerator / denominator) * 100);
-  return { matchedKeywords, missingKeywords, score };
+  return {
+    matchedKeywords,
+    missingKeywords,
+    missingRequired,
+    missingPreferred,
+    score
+  };
 }
 
 export async function analyzeResumeAts(input: {
   jobTitle: string;
   jobDescription: string;
   resumeText: string;
-}): Promise<AtsReport> {
-  // The LLM extracts + classifies the JD keywords following the Resume ATS
-  // Optimizer criteria (reference guidance). Matching + scoring stay
-  // deterministic so the score is stable and only moves when the resume changes.
-  const prompt = `You are an ATS keyword analyst. Follow the Resume ATS Optimizer criteria in the reference guidance below. From the JOB DESCRIPTION, extract the keywords a resume must contain to pass ATS screening — hard skills, technologies, tools, methodologies, certifications, concrete qualifications — and classify EACH as:
-- "required": must-have / critical (under Requirements, "must have", "X years", or mentioned repeatedly)
-- "preferred": nice-to-have / bonus ("a plus", "preferred", mentioned once)
-Prefer specific, screenable terms ("React", "Next.js", "CI/CD", "Kubernetes", "content management") over generic soft skills.
+  // A previously-extracted keyword set for this JD. When provided the model
+  // REUSES it (only re-judging presence + suggestions), so the gap list stays
+  // stable across analyses instead of drifting on every call.
+  cachedKeywords?: AnalyzedKeyword[] | null;
+}): Promise<AtsReport & { keywords: AnalyzedKeyword[] }> {
+  const cached =
+    Array.isArray(input.cachedKeywords) && input.cachedKeywords.length > 0
+      ? input.cachedKeywords
+      : null;
+
+  const keywordTask = cached
+    ? `Use EXACTLY this fixed keyword list — do NOT add, drop, or rename any:
+${JSON.stringify(cached.map((k) => ({ term: k.term, importance: k.importance })))}
+For each keyword set "present" to whether the RESUME already demonstrates it, counting synonyms/equivalents (e.g. "continuous integration" satisfies "CI/CD", "led a team" satisfies "leadership").`
+    : `Extract 12-20 keywords a resume must contain to pass ATS screening — hard skills, technologies, tools, methodologies, certifications, concrete qualifications (prefer specific screenable terms over generic soft skills). Classify EACH as "required" (must-have/critical: under Requirements, "must have", "X years", or repeated) or "preferred" (nice-to-have: "a plus", "preferred", mentioned once), and set "present" to whether the RESUME already demonstrates it, counting synonyms/equivalents.`;
+
+  const prompt = `You are an ATS keyword analyst. Follow the Resume ATS Optimizer criteria in the reference guidance below.
 
 JOB TITLE: ${input.jobTitle}
 
 JOB DESCRIPTION:
 ${input.jobDescription}
 
+RESUME (JSON):
+${input.resumeText}
+
 ${ATS_ANALYSIS_GUIDANCE}
+
+${keywordTask}
 
 Return ONLY this JSON object and nothing else:
 {
-  "keywords": [{"term": "React", "importance": "required"}, ...],
+  "keywords": [{"term": "React", "importance": "required", "present": true}, ...],
   "suggestions": ["3-5 concrete edits that would raise the match, inserting missing REQUIRED keywords into the summary, skills, or a specific experience bullet"]
 }
-Include 12-20 keywords, most important first.`;
+List required keywords first.`;
 
   const raw = await generateJsonContent(prompt);
   let parsed: { keywords?: unknown; suggestions?: unknown } = {};
@@ -144,8 +188,8 @@ Include 12-20 keywords, most important first.`;
     parsed = {};
   }
 
-  // Accept both the classified shape ({term, importance}) and a bare string list
-  // (older/loose model output) — bare strings default to "required".
+  // Accept the classified shape ({term, importance, present}) or a bare string
+  // list (loose model output) — bare strings default to "required".
   const keywords: AnalyzedKeyword[] = Array.isArray(parsed.keywords)
     ? parsed.keywords
         .map((k): AnalyzedKeyword | null => {
@@ -153,11 +197,16 @@ Include 12-20 keywords, most important first.`;
             return { term: k, importance: 'required' };
           }
           if (k && typeof k === 'object' && 'term' in k) {
-            const obj = k as { term?: unknown; importance?: unknown };
+            const obj = k as {
+              term?: unknown;
+              importance?: unknown;
+              present?: unknown;
+            };
             return {
               term: String(obj.term ?? ''),
               importance:
-                obj.importance === 'preferred' ? 'preferred' : 'required'
+                obj.importance === 'preferred' ? 'preferred' : 'required',
+              present: obj.present === true
             };
           }
           return null;
@@ -169,10 +218,13 @@ Include 12-20 keywords, most important first.`;
     ? parsed.suggestions.map((x) => String(x).trim()).filter(Boolean)
     : [];
 
-  const { matchedKeywords, missingKeywords, score } = scoreAtsMatch(
-    keywords,
-    input.resumeText
-  );
+  const {
+    matchedKeywords,
+    missingKeywords,
+    missingRequired,
+    missingPreferred,
+    score
+  } = scoreAtsMatch(keywords, input.resumeText);
 
   const total = matchedKeywords.length + missingKeywords.length;
   const band =
@@ -193,21 +245,24 @@ Include 12-20 keywords, most important first.`;
   const finalSuggestions =
     suggestions.length > 0
       ? suggestions
-      : missingKeywords.length > 0
+      : missingRequired.length > 0
         ? [
-            `Add these missing keywords where they fit your background: ${missingKeywords
+            `Add these missing required keywords where they fit your background: ${missingRequired
               .slice(0, 8)
               .join(', ')}.`
           ]
         : [
-            'Your resume already covers the key terms — tighten wording and quantify impact.'
+            'Your resume already covers the required terms — tighten wording and quantify impact.'
           ];
 
   return {
     score,
     matchedKeywords,
     missingKeywords,
+    missingRequired,
+    missingPreferred,
     rationale,
-    suggestions: finalSuggestions
+    suggestions: finalSuggestions,
+    keywords
   };
 }

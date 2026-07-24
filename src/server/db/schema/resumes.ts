@@ -1,4 +1,4 @@
-import { text, timestamp, integer, pgTable, jsonb } from 'drizzle-orm/pg-core';
+import { text, timestamp, pgTable, jsonb } from 'drizzle-orm/pg-core';
 import { profiles } from './profiles';
 import { accounts } from './accounts';
 
@@ -24,6 +24,13 @@ export const resumes = pgTable('resumes', {
   tools: jsonb('tools').array(),
   languages: jsonb('languages').array(),
   hiddenSections: jsonb('hidden_sections').$type<string[]>(),
+  // Cached ATS keyword set for the current JD (hash guards against JD changes),
+  // so the analyze→improve→re-analyze gap list stays stable instead of the LLM
+  // re-extracting a slightly different set each time.
+  atsKeywords: jsonb('ats_keywords').$type<{
+    hash: string;
+    keywords: { term: string; importance: 'required' | 'preferred' }[];
+  }>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()
 });

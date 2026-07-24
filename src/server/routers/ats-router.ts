@@ -33,6 +33,28 @@ function visibleResumeText(s: {
   });
 }
 
+type KeywordCache = {
+  hash: string;
+  keywords: { term: string; importance: 'required' | 'preferred' }[];
+};
+
+// Stable hash of the JD so a cached keyword set is only reused while the JD is
+// unchanged (a re-tailor to a new JD invalidates it).
+function hashJd(jobTitle: string, jobDescription: string): string {
+  const s = `${jobTitle}\n${jobDescription}`;
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = (h * 33 + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+function cachedKeywords(
+  atsKeywords: unknown,
+  hash: string
+): KeywordCache['keywords'] | null {
+  const c = atsKeywords as KeywordCache | null | undefined;
+  return c && c.hash === hash && Array.isArray(c.keywords) ? c.keywords : null;
+}
+
 export const atsRouter = j.router({
   getReport: privateProcedure
     .input(z.object({ resumeId: z.string() }))
@@ -58,11 +80,14 @@ export const atsRouter = j.router({
         hiddenSections: resume.hiddenSections
       });
 
-      const report = await analyzeResumeAts({
+      const hash = hashJd(resume.jdJobTitle, resume.jdPostDetails);
+      const { keywords, ...report } = await analyzeResumeAts({
         jobTitle: resume.jdJobTitle,
         jobDescription: resume.jdPostDetails,
-        resumeText
+        resumeText,
+        cachedKeywords: cachedKeywords(resume.atsKeywords, hash)
       });
+      void keywords; // query — don't persist here (analyzeCurrent owns the cache)
 
       return c.json(report);
     }),
@@ -100,11 +125,33 @@ export const atsRouter = j.router({
         hiddenSections: current.hiddenSections
       });
 
-      const report = await analyzeResumeAts({
+      const hash = hashJd(resume.jdJobTitle, resume.jdPostDetails);
+      const cached = cachedKeywords(resume.atsKeywords, hash);
+      const { keywords, ...report } = await analyzeResumeAts({
         jobTitle: resume.jdJobTitle,
         jobDescription: resume.jdPostDetails,
-        resumeText
+        resumeText,
+        cachedKeywords: cached
       });
+
+      // Persist a freshly-extracted keyword set so the gap list stays stable on
+      // the next analysis (only re-judging presence, not re-picking keywords).
+      if (!cached && keywords.length > 0) {
+        await db
+          .update(resumes)
+          .set({
+            atsKeywords: {
+              hash,
+              keywords: keywords.map((k) => ({
+                term: k.term,
+                importance: k.importance
+              }))
+            }
+          })
+          .where(
+            and(eq(resumes.id, input.resumeId), eq(resumes.userId, user.id))
+          );
+      }
 
       return c.json(report);
     })
