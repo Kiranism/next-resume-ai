@@ -1,5 +1,6 @@
 import { generateJsonContent } from './ai-model';
 import { ATS_SCORING_GUIDELINES } from './resume-guidance';
+import { ATS_ANALYSIS_GUIDANCE } from './guidance';
 
 export type AtsReport = {
   score: number;
@@ -99,6 +100,8 @@ JOB TITLE: ${input.jobTitle}
 
 JOB DESCRIPTION:
 ${input.jobDescription}
+
+${ATS_ANALYSIS_GUIDANCE}
 
 ${ATS_SCORING_GUIDELINES}
 

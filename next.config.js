@@ -13,6 +13,13 @@ const nextConfig = {
   webpack: (config) => {
     config.resolve.alias.canvas = false;
 
+    // Load .md guidance files (the installed resume skills) as raw strings so
+    // they bundle into the server code and feed the AI prompts verbatim.
+    config.module.rules.push({
+      test: /\.md$/,
+      type: 'asset/source'
+    });
+
     return config;
   }
   // experimental: {

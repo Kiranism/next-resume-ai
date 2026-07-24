@@ -4,6 +4,7 @@ import {
 } from '@/features/resume/utils/form-schema';
 import { generateJsonContent } from './ai-model';
 import { ATS_WRITING_GUIDELINES } from './resume-guidance';
+import { RESUME_WRITING_GUIDANCE } from './guidance';
 import { z } from 'zod';
 import { Profile } from '@/server/db/schema/profiles';
 import { ProfileWithRelations } from '../routers/profile-router';
@@ -114,6 +115,8 @@ export async function generateResumeContent(
             .join('\n')
         : 'No education recorded'
     }
+
+    ${RESUME_WRITING_GUIDANCE}
 
     ${ATS_WRITING_GUIDELINES}
 
