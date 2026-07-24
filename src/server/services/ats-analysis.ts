@@ -79,6 +79,10 @@ export function scoreAtsMatch(
   missingKeywords: string[];
   missingRequired: string[];
   missingPreferred: string[];
+  // Keywords literally MISSING but which the model judged the resume covers via
+  // a synonym/equivalent — surfaced as "add the exact term" guidance, NOT counted
+  // toward the score (a real ATS matches literally).
+  synonymCovered: string[];
   score: number;
 } {
   const resumeLower = resumeText.toLowerCase();
@@ -106,24 +110,27 @@ export function scoreAtsMatch(
   const missingKeywords: string[] = [];
   const missingRequired: string[] = [];
   const missingPreferred: string[] = [];
+  const synonymCovered: string[] = [];
   let reqTotal = 0;
   let reqMatched = 0;
   let prefTotal = 0;
   let prefMatched = 0;
   for (const kw of unique) {
-    const present =
-      kw.present === true ||
-      resumeHasKeyword(kw.term, resumeLower, resumeCompact);
+    // Score on LITERAL presence only — that's what an ATS keyword screen does.
+    // The model's semantic `present` flag doesn't inflate the score; it only
+    // marks "covered via a related term, add the exact keyword" for guidance.
+    const literal = resumeHasKeyword(kw.term, resumeLower, resumeCompact);
     if (kw.importance === 'required') {
       reqTotal++;
-      if (present) reqMatched++;
+      if (literal) reqMatched++;
       else missingRequired.push(kw.term);
     } else {
       prefTotal++;
-      if (present) prefMatched++;
+      if (literal) prefMatched++;
       else missingPreferred.push(kw.term);
     }
-    (present ? matchedKeywords : missingKeywords).push(kw.term);
+    (literal ? matchedKeywords : missingKeywords).push(kw.term);
+    if (!literal && kw.present === true) synonymCovered.push(kw.term);
   }
 
   const numerator = reqMatched + PREFERRED_WEIGHT * prefMatched;
@@ -135,6 +142,7 @@ export function scoreAtsMatch(
     missingKeywords,
     missingRequired,
     missingPreferred,
+    synonymCovered,
     score
   };
 }
@@ -223,6 +231,7 @@ List required keywords first.`;
     missingKeywords,
     missingRequired,
     missingPreferred,
+    synonymCovered,
     score
   } = scoreAtsMatch(keywords, input.resumeText);
 
@@ -242,7 +251,17 @@ List required keywords first.`;
       ? 'Could not extract keywords from the job description — add a job description to get an ATS match score.'
       : `You match ${matchedKeywords.length} of ${total} key terms from the job description — ${score}% (${band}; aim for 80%+). Add the missing required keywords below — in your skills, and where truthful in your experience bullets and summary — to raise the score.`;
 
-  const finalSuggestions =
+  // "You cover these conceptually — use the exact term so an ATS matches" is the
+  // most actionable, honest guidance the semantic pass produces.
+  const synonymHint =
+    synonymCovered.length > 0
+      ? [
+          `Use the EXACT job-description terms for these — your resume covers them with related wording, but an ATS matches literally: ${synonymCovered
+            .slice(0, 8)
+            .join(', ')}.`
+        ]
+      : [];
+  const baseSuggestions =
     suggestions.length > 0
       ? suggestions
       : missingRequired.length > 0
@@ -254,6 +273,7 @@ List required keywords first.`;
         : [
             'Your resume already covers the required terms — tighten wording and quantify impact.'
           ];
+  const finalSuggestions = [...synonymHint, ...baseSuggestions];
 
   return {
     score,

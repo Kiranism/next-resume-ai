@@ -6,7 +6,7 @@ import type {
   ChatMessage
 } from '@/features/resume/utils/chat-types';
 import { ATS_WRITING_GUIDELINES } from './resume-guidance';
-import { RESUME_WRITING_GUIDANCE } from './resume-skills';
+import { CHAT_WRITING_GUIDANCE } from './resume-skills';
 
 const DEFAULT_REPLY = 'Done — let me know if you want anything else.';
 
@@ -459,7 +459,7 @@ Target job (for ATS relevance):
 Job Title: ${jobContext.jobTitle || 'Not specified'}
 Job Description: ${jobContext.jobDescription || 'Not specified'}
 
-${RESUME_WRITING_GUIDANCE}
+${CHAT_WRITING_GUIDANCE}
 
 ${ATS_WRITING_GUIDELINES}
 

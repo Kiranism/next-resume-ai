@@ -86,16 +86,19 @@ function keyFor(
   section: ChatFocus['section'],
   item: {
     employer?: string;
-    startDate?: string;
+    jobTitle?: string;
     school?: string;
+    degree?: string;
     name?: string;
   }
 ): string | undefined {
   switch (section) {
+    // Text-only keys, consistent with the server merge (itemKey) so focus
+    // resolution and edit-matching identify an item the same way.
     case 'jobs':
-      return `${item.employer ?? ''}|${item.startDate ?? ''}`;
+      return `${item.employer ?? ''}|${item.jobTitle ?? ''}`;
     case 'educations':
-      return `${item.school ?? ''}|${item.startDate ?? ''}`;
+      return `${item.school ?? ''}|${item.degree ?? ''}`;
     case 'projects':
       return `${item.name ?? ''}`;
     default:
@@ -105,7 +108,13 @@ function keyFor(
 
 function matchesKey(
   item:
-    | { employer?: string; startDate?: string; school?: string; name?: string }
+    | {
+        employer?: string;
+        jobTitle?: string;
+        school?: string;
+        degree?: string;
+        name?: string;
+      }
     | undefined,
   focus: ChatFocus
 ): boolean {

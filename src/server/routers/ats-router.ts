@@ -55,6 +55,26 @@ function cachedKeywords(
   return c && c.hash === hash && Array.isArray(c.keywords) ? c.keywords : null;
 }
 
+// Store the freshly-extracted keyword set so the gap list stays stable next
+// analysis. Best-effort — caching is an optimization, never let it fail the
+// request (both endpoints seed it so whichever runs first warms the cache).
+async function persistKeywordCache(
+  resumeId: string,
+  userId: string,
+  hash: string,
+  keywords: KeywordCache['keywords']
+): Promise<void> {
+  if (keywords.length === 0) return;
+  try {
+    await db
+      .update(resumes)
+      .set({ atsKeywords: { hash, keywords } })
+      .where(and(eq(resumes.id, resumeId), eq(resumes.userId, userId)));
+  } catch (err) {
+    console.error('Failed to cache ATS keywords (non-fatal):', err);
+  }
+}
+
 export const atsRouter = j.router({
   getReport: privateProcedure
     .input(z.object({ resumeId: z.string() }))
@@ -81,13 +101,21 @@ export const atsRouter = j.router({
       });
 
       const hash = hashJd(resume.jdJobTitle, resume.jdPostDetails);
+      const cached = cachedKeywords(resume.atsKeywords, hash);
       const { keywords, ...report } = await analyzeResumeAts({
         jobTitle: resume.jdJobTitle,
         jobDescription: resume.jdPostDetails,
         resumeText,
-        cachedKeywords: cachedKeywords(resume.atsKeywords, hash)
+        cachedKeywords: cached
       });
-      void keywords; // query — don't persist here (analyzeCurrent owns the cache)
+      if (!cached) {
+        await persistKeywordCache(
+          resume.id,
+          user.id,
+          hash,
+          keywords.map((k) => ({ term: k.term, importance: k.importance }))
+        );
+      }
 
       return c.json(report);
     }),
@@ -134,28 +162,13 @@ export const atsRouter = j.router({
         cachedKeywords: cached
       });
 
-      // Persist a freshly-extracted keyword set so the gap list stays stable on
-      // the next analysis (only re-judging presence, not re-picking keywords).
-      // Best-effort: caching is an optimization, never let it fail the analysis.
-      if (!cached && keywords.length > 0) {
-        try {
-          await db
-            .update(resumes)
-            .set({
-              atsKeywords: {
-                hash,
-                keywords: keywords.map((k) => ({
-                  term: k.term,
-                  importance: k.importance
-                }))
-              }
-            })
-            .where(
-              and(eq(resumes.id, input.resumeId), eq(resumes.userId, user.id))
-            );
-        } catch (err) {
-          console.error('Failed to cache ATS keywords (non-fatal):', err);
-        }
+      if (!cached) {
+        await persistKeywordCache(
+          input.resumeId,
+          user.id,
+          hash,
+          keywords.map((k) => ({ term: k.term, importance: k.importance }))
+        );
       }
 
       return c.json(report);

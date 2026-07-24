@@ -67,3 +67,11 @@ export const ATS_ANALYSIS_GUIDANCE = frame('ATS analysis', [
   jobDescriptionAnalyzer,
   formatter
 ]);
+
+// Lighter guidance for the PER-MESSAGE chat (creation gets the full set): just
+// the two skills that most improve an edit — achievement bullets + metrics — so
+// every chat turn isn't carrying ~1.5k lines of guidance.
+export const CHAT_WRITING_GUIDANCE = frame('Resume writing', [
+  bulletWriter,
+  quantifier
+]);
