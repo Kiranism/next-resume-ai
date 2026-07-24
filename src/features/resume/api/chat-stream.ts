@@ -22,7 +22,7 @@ export async function streamChatEdit(
     resumeId: string;
     message: string;
     resume: TResumeEditFormValues;
-    focus?: ChatFocus | null;
+    focus?: ChatFocus[] | null;
   },
   handlers: StreamHandlers
 ): Promise<void> {

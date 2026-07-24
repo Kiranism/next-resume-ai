@@ -202,17 +202,12 @@ function resumeForPrompt(resume: TResumeEditFormValues) {
   };
 }
 
-// FOCUS prompt block: when the user scoped the chat to a specific item (via the
-// "@" picker), tell the model to edit ONLY that item and echo just that item
-// back. Sibling safety no longer depends on this — mergeArrayById preserves any
-// item the model omits regardless — so this purely removes the "which item did
-// they mean?" guess. Returns '' when there is no focus.
-function buildFocusBlock(
+// One line describing a single focused item for the FOCUS block. Returns '' for
+// an out-of-range index (the item was deleted client-side before send).
+function describeFocus(
   resume: TResumeEditFormValues,
-  focus: ChatFocus | null | undefined
+  focus: ChatFocus
 ): string {
-  if (!focus) return '';
-
   if (
     typeof focus.index === 'number' &&
     (focus.section === 'jobs' ||
@@ -223,30 +218,36 @@ function buildFocusBlock(
     if (!Array.isArray(arr) || focus.index < 0 || focus.index >= arr.length) {
       return '';
     }
-    const item = arr[focus.index];
-    return `
-FOCUS — the user is targeting ONE specific item. Apply their request ONLY to
-this item, and return ONLY this item (per the list-section rule below). Do not
-touch any other item or section.
-Section: ${focus.section} (item #${focus.index})
-Item: ${JSON.stringify(item)}
-`;
+    return `- ${focus.section} (item #${focus.index}): ${JSON.stringify(arr[focus.index])}`;
   }
 
   if (focus.section === 'summary') {
-    return `
-FOCUS — the user is targeting the professional summary only. Apply their
-request ONLY to personal_details.summary; do not touch any other section.
-Current summary: ${JSON.stringify(resume.personal_details?.summary ?? '')}
-`;
+    return `- summary: ${JSON.stringify(resume.personal_details?.summary ?? '')}`;
   }
 
   // skills / tools / languages — whole-list sections (no per-item index).
-  const list = resume[focus.section] ?? [];
+  return `- ${focus.section} list: ${JSON.stringify(resume[focus.section] ?? [])}`;
+}
+
+// FOCUS prompt block: when the user scoped the chat to specific item(s) via the
+// "@" picker, tell the model to edit ONLY those and echo just the changed
+// item(s) back. Sibling safety no longer depends on this — mergeArrayById
+// preserves any item the model omits regardless — so this purely removes the
+// "which item did they mean?" guess. Returns '' when there is no focus.
+function buildFocusBlock(
+  resume: TResumeEditFormValues,
+  focuses: ChatFocus[] | null | undefined
+): string {
+  if (!focuses || focuses.length === 0) return '';
+  const lines = focuses
+    .map((focus) => describeFocus(resume, focus))
+    .filter((line) => line !== '');
+  if (lines.length === 0) return '';
   return `
-FOCUS — the user is targeting the "${focus.section}" list only. Apply their
-request ONLY to that list; do not touch any other section.
-Current ${focus.section}: ${JSON.stringify(list)}
+FOCUS — the user is targeting ONLY these part(s) of the resume. Apply their
+request ONLY to the item(s) listed here and nothing else; for each, return only
+the changed item(s) per the list-section rule below.
+${lines.join('\n')}
 `;
 }
 
@@ -254,7 +255,7 @@ export function buildChatPrompt(params: {
   messages: ChatMessage[];
   resume: TResumeEditFormValues;
   jobContext: { jobTitle: string; jobDescription: string };
-  focus?: ChatFocus | null;
+  focus?: ChatFocus[] | null;
 }): string {
   const { messages, resume, jobContext, focus } = params;
 

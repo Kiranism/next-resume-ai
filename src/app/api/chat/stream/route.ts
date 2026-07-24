@@ -23,7 +23,7 @@ interface ChatStreamBody {
   resumeId: string;
   message: string;
   resume: TResumeEditFormValues;
-  focus?: ChatFocus | null;
+  focus?: ChatFocus[] | null;
 }
 
 function jsonLine(event: Record<string, unknown>): Uint8Array {

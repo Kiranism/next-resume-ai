@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import {
   IconArrowBackUp,
@@ -33,10 +33,9 @@ import {
 } from '@/components/ui/message-scroller';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { type TResumeEditFormValues } from '@/features/resume/utils/form-schema';
@@ -78,15 +77,8 @@ function createId() {
   }
 }
 
-const FOCUS_SECTION_LABELS: Record<ChatFocus['section'], string> = {
-  summary: 'Summary',
-  jobs: 'Experience',
-  educations: 'Education',
-  projects: 'Projects',
-  skills: 'Skills',
-  tools: 'Tools',
-  languages: 'Languages'
-};
+// Stable id for a focus option — dedupes/toggles selections and keys the chips.
+const focusId = (f: ChatFocus) => `${f.section}:${f.index ?? 'all'}`;
 
 // Identity snapshot for an array-section item, used to re-find it by content
 // (not position) if the user reorders/edits the list after picking a focus.
@@ -202,10 +194,15 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
   const [messages, setMessages] = useState<ChatUiMessage[]>([GREETING]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
-  // Focus chip: the resume item the NEXT send is scoped to. Cleared right
-  // after it's used — context applies to one message, not the whole thread,
-  // so a reply about "this project" can't silently leak into later turns.
-  const [focus, setFocus] = useState<ChatFocus | null>(null);
+  // Focus chips: the resume items the NEXT send is scoped to (multi-select).
+  // Cleared right after they're used — context applies to one message, not the
+  // whole thread, so a reply about "this project" can't leak into later turns.
+  const [focuses, setFocuses] = useState<ChatFocus[]>([]);
+  const toggleFocus = (option: ChatFocus, on: boolean) =>
+    setFocuses((prev) => {
+      const rest = prev.filter((f) => focusId(f) !== focusId(option));
+      return on ? [...rest, option] : rest;
+    });
   const [focusMenuOpen, setFocusMenuOpen] = useState(false);
   const [focusOptions, setFocusOptions] = useState<ChatFocus[]>([]);
   const seededRef = useRef(false);
@@ -247,27 +244,32 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
     // Snapshot BEFORE applying edits so this turn's Undo can restore it.
     const snapshot = form.getValues();
 
-    // Drift guard: re-resolve the focused item's index against live values in
-    // case it moved or was deleted since the chip was set.
-    const { resolved: resolvedFocus, dropped } = resolveFocusForSend(
-      focus,
-      snapshot
-    );
-    // Focus is single-use: this message consumes it, so the chip resets and
+    // Drift guard: re-resolve each focused item's index against live values in
+    // case it moved or was deleted since its chip was set.
+    const resolvedFocuses: ChatFocus[] = [];
+    let droppedCount = 0;
+    for (const f of focuses) {
+      const { resolved, dropped } = resolveFocusForSend(f, snapshot);
+      if (dropped) droppedCount++;
+      else if (resolved) resolvedFocuses.push(resolved);
+    }
+    // Focus is single-use: this message consumes the chips, so they reset and
     // the next message starts unscoped unless the user picks again.
-    setFocus(null);
+    setFocuses([]);
 
     const assistantId = createId();
     setMessages((prev) => [
       ...prev,
       { id: createId(), role: 'user', content },
-      ...(dropped
+      ...(droppedCount > 0
         ? [
             {
               id: createId(),
               role: 'assistant' as const,
               content:
-                'The item you selected no longer exists, so I edited the whole resume instead.'
+                resolvedFocuses.length > 0
+                  ? 'Some items you selected no longer exist; I applied your request to the ones that remain.'
+                  : 'The items you selected no longer exist, so I edited the whole resume instead.'
             }
           ]
         : []),
@@ -278,7 +280,12 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
 
     // The server owns conversation history, so only the new message is sent.
     await streamChatEdit(
-      { resumeId, message: content, resume: snapshot, focus: resolvedFocus },
+      {
+        resumeId,
+        message: content,
+        resume: snapshot,
+        focus: resolvedFocuses.length > 0 ? resolvedFocuses : null
+      },
       {
         onText: (chunk) =>
           setMessages((prev) =>
@@ -672,26 +679,33 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
         </div>
       )}
 
-      {/* Focus chip: the resume item attached to the next message, if any */}
-      {focus && (
+      {/* Focus chips: the resume items attached to the next message, if any */}
+      {focuses.length > 0 && (
         <div className='flex flex-wrap items-center gap-2'>
-          <Badge variant='secondary' className='gap-1 py-1 pr-1 pl-2.5'>
-            {focus.label}
-            <button
-              type='button'
-              onClick={() => setFocus(null)}
-              aria-label='Clear focused item'
-              className='hover:bg-foreground/10 ml-0.5 rounded-full p-0.5'
+          {focuses.map((f) => (
+            <Badge
+              key={focusId(f)}
+              variant='secondary'
+              className='gap-1 py-1 pr-1 pl-2.5'
             >
-              <IconX className='size-3' />
-            </button>
-          </Badge>
+              {f.label}
+              <button
+                type='button'
+                onClick={() => toggleFocus(f, false)}
+                aria-label={`Remove ${f.label}`}
+                className='hover:bg-foreground/10 ml-0.5 rounded-full p-0.5'
+              >
+                <IconX className='size-3' />
+              </button>
+            </Badge>
+          ))}
         </div>
       )}
 
-      {/* @ mention picker: opened only by typing "@" in the composer (see
-          handleInputChange) — no separate button, the trigger below exists
-          purely as an anchor point for the menu's positioning. */}
+      {/* @ mention picker: opened by typing "@" in the composer (see
+          handleInputChange). Multi-select checklist — the menu stays open so you
+          can attach several items; the trigger below is a zero-size anchor the
+          menu positions against. */}
       <DropdownMenu
         open={focusMenuOpen}
         onOpenChange={(open: boolean) => {
@@ -711,23 +725,16 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
               Nothing to focus on yet
             </DropdownMenuItem>
           ) : (
-            focusOptions.map((option, i) => {
-              const prevSection = i > 0 ? focusOptions[i - 1].section : null;
-              const showLabel = option.section !== prevSection;
+            focusOptions.map((option) => {
+              const id = focusId(option);
               return (
-                <Fragment key={`${option.section}-${option.index ?? 'all'}`}>
-                  {showLabel && (
-                    <>
-                      {i > 0 && <DropdownMenuSeparator />}
-                      <DropdownMenuLabel>
-                        {FOCUS_SECTION_LABELS[option.section]}
-                      </DropdownMenuLabel>
-                    </>
-                  )}
-                  <DropdownMenuItem onClick={() => setFocus(option)}>
-                    {option.label}
-                  </DropdownMenuItem>
-                </Fragment>
+                <DropdownMenuCheckboxItem
+                  key={id}
+                  checked={focuses.some((f) => focusId(f) === id)}
+                  onCheckedChange={(on: boolean) => toggleFocus(option, on)}
+                >
+                  {option.label}
+                </DropdownMenuCheckboxItem>
               );
             })
           )}
