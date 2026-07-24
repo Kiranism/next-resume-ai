@@ -7,7 +7,6 @@ import {
   IconArrowUp,
   IconChecklist,
   IconPencil,
-  IconRefresh,
   IconSparkles,
   IconTrash,
   IconX
@@ -388,9 +387,7 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
     setBusy(false);
   };
 
-  // `refresh` bypasses the cached JD keyword set (re-extracts it) — the escape
-  // hatch when the extracted keywords look off.
-  const handleAtsScore = async (refresh = false) => {
+  const handleAtsScore = async () => {
     const messageId = createId();
     // Remember the last score in this thread so we can show the improvement.
     const prevScore = [...messages].reverse().find((m) => m.atsReport)
@@ -404,8 +401,7 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
       // Analyze the CURRENT field values and recompute fresh every time.
       const response = await client.ats.analyzeCurrent.$post({
         resumeId,
-        resume: form.getValues(),
-        refresh
+        resume: form.getValues()
       });
       const data = await response.json();
       if (data && !('error' in data)) {
@@ -786,31 +782,18 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
                                   </div>
                                 )}
 
-                                <div className='flex flex-wrap items-center gap-2'>
-                                  <Button
-                                    variant='outline'
-                                    size='sm'
-                                    className='h-7 w-fit gap-1.5'
-                                    disabled={busy}
-                                    onClick={() =>
-                                      handleApplyAts(message.atsReport!)
-                                    }
-                                  >
-                                    <IconSparkles data-icon='inline-start' />
-                                    Improve my resume with these
-                                  </Button>
-                                  <Button
-                                    variant='ghost'
-                                    size='sm'
-                                    className='text-muted-foreground h-7 w-fit gap-1.5'
-                                    disabled={busy}
-                                    title='Keywords look off? Re-extract them from the job description.'
-                                    onClick={() => handleAtsScore(true)}
-                                  >
-                                    <IconRefresh data-icon='inline-start' />
-                                    Re-extract keywords
-                                  </Button>
-                                </div>
+                                <Button
+                                  variant='outline'
+                                  size='sm'
+                                  className='h-7 w-fit gap-1.5'
+                                  disabled={busy}
+                                  onClick={() =>
+                                    handleApplyAts(message.atsReport!)
+                                  }
+                                >
+                                  <IconSparkles data-icon='inline-start' />
+                                  Improve my resume with these
+                                </Button>
                               </div>
                             )}
 

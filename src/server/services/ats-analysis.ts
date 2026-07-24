@@ -30,6 +30,103 @@ export type {
 
 const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 
+// Stable hash of the JD, guarding the persisted keyword set: reused while the
+// JD is unchanged, invalidated the moment it differs.
+export function hashJd(jobTitle: string, jobDescription: string): string {
+  const s = `${jobTitle}\n${jobDescription}`;
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = (h * 33 + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+// Parse a model keyword list: the classified shape ({term, importance,
+// aliases, present}) or a bare string list (loose output) — bare strings
+// default to "required".
+function parseKeywordList(raw: unknown): AnalyzedKeyword[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((k): AnalyzedKeyword | null => {
+      if (typeof k === 'string') {
+        return { term: k, importance: 'required', aliases: [] };
+      }
+      if (k && typeof k === 'object' && 'term' in k) {
+        const obj = k as {
+          term?: unknown;
+          importance?: unknown;
+          aliases?: unknown;
+          present?: unknown;
+        };
+        return {
+          term: String(obj.term ?? ''),
+          importance: obj.importance === 'preferred' ? 'preferred' : 'required',
+          aliases: arr(obj.aliases)
+            .map((a) => String(a).trim())
+            .filter(Boolean)
+            .slice(0, 3),
+          present: obj.present === true
+        };
+      }
+      return null;
+    })
+    .filter((k): k is AnalyzedKeyword => k !== null && k.term.trim() !== '');
+}
+
+const EXTRACTION_TASK = `Extract 12-20 keywords a resume must contain to pass ATS screening — hard skills, technologies, tools, methodologies, certifications, concrete qualifications (prefer specific screenable terms over generic soft skills). Every term must appear VERBATIM in the job description. Classify EACH as "required" (must-have/critical: under Requirements, "must have", "X years", or repeated) or "preferred" (nice-to-have: "a plus", "preferred", mentioned once). For each keyword also list up to 3 "aliases": alternate literal spellings an ATS search would accept as the SAME thing — acronym ↔ expansion ("CI/CD" ↔ "continuous integration"), product-name variants ("React.js" ↔ "React") — NOT broader concepts.`;
+
+// One-time JD keyword extraction, run at resume creation (in parallel with
+// content generation, so it adds no latency). This is the ONLY place a keyword
+// set should normally be born — analyses consume the persisted set, keeping
+// the gap list identical from the very first analysis. Never throws: quality
+// is retried once, total failure returns [] (the analysis-time fallback
+// extraction then covers it).
+export async function extractJdKeywords(
+  jobTitle: string,
+  jobDescription: string
+): Promise<AnalyzedKeyword[]> {
+  const prompt = `You are an ATS keyword analyst. Follow the Resume ATS Optimizer criteria in the reference guidance below.
+
+JOB TITLE: ${jobTitle}
+
+JOB DESCRIPTION:
+${jobDescription}
+
+${ATS_ANALYSIS_GUIDANCE}
+
+${EXTRACTION_TASK}
+
+Return ONLY this JSON object and nothing else:
+{
+  "keywords": [{"term": "React", "importance": "required", "aliases": ["React.js"]}, ...]
+}
+List required keywords first.`;
+
+  let best: AnalyzedKeyword[] = [];
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const raw = await generateJsonContent(prompt);
+      let parsed: { keywords?: unknown } = {};
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        parsed = {};
+      }
+      const keywords = filterKeywordsToJd(
+        parseKeywordList(parsed.keywords),
+        `${jobTitle}\n${jobDescription}`
+      );
+      if (keywords.length > best.length) best = keywords;
+      // A healthy JD yields well over 6 screenable terms — retry thin results.
+      if (best.length >= 6) break;
+    } catch (err) {
+      console.error(
+        `JD keyword extraction attempt ${attempt + 1} failed:`,
+        err
+      );
+    }
+  }
+  return best;
+}
+
 // ---------------------------------------------------------------------------
 // Keyword scoring (60% of the blended score)
 // ---------------------------------------------------------------------------
@@ -363,7 +460,7 @@ ${JSON.stringify(
   }))
 )}
 For each keyword set "present" to whether the RESUME already demonstrates it, counting synonyms/equivalents (e.g. "continuous integration" satisfies "CI/CD", "led a team" satisfies "leadership").`
-    : `Extract 12-20 keywords a resume must contain to pass ATS screening — hard skills, technologies, tools, methodologies, certifications, concrete qualifications (prefer specific screenable terms over generic soft skills). Every term must appear VERBATIM in the job description. Classify EACH as "required" (must-have/critical: under Requirements, "must have", "X years", or repeated) or "preferred" (nice-to-have: "a plus", "preferred", mentioned once). For each keyword also list up to 3 "aliases": alternate literal spellings an ATS search would accept as the SAME thing — acronym ↔ expansion ("CI/CD" ↔ "continuous integration"), product-name variants ("React.js" ↔ "React") — NOT broader concepts. Set "present" to whether the RESUME already demonstrates it, counting synonyms/equivalents.`;
+    : `${EXTRACTION_TASK} Set "present" to whether the RESUME already demonstrates it, counting synonyms/equivalents.`;
 
   const prompt = `You are an ATS keyword analyst. Follow the Resume ATS Optimizer criteria in the reference guidance below.
 
@@ -394,36 +491,7 @@ List required keywords first.`;
     parsed = {};
   }
 
-  // Accept the classified shape ({term, importance, aliases, present}) or a
-  // bare string list (loose model output) — bare strings default to "required".
-  let keywords: AnalyzedKeyword[] = Array.isArray(parsed.keywords)
-    ? parsed.keywords
-        .map((k): AnalyzedKeyword | null => {
-          if (typeof k === 'string') {
-            return { term: k, importance: 'required', aliases: [] };
-          }
-          if (k && typeof k === 'object' && 'term' in k) {
-            const obj = k as {
-              term?: unknown;
-              importance?: unknown;
-              aliases?: unknown;
-              present?: unknown;
-            };
-            return {
-              term: String(obj.term ?? ''),
-              importance:
-                obj.importance === 'preferred' ? 'preferred' : 'required',
-              aliases: arr(obj.aliases)
-                .map((a) => String(a).trim())
-                .filter(Boolean)
-                .slice(0, 3),
-              present: obj.present === true
-            };
-          }
-          return null;
-        })
-        .filter((k): k is AnalyzedKeyword => k !== null && k.term.trim() !== '')
-    : [];
+  let keywords: AnalyzedKeyword[] = parseKeywordList(parsed.keywords);
 
   // Freshly-extracted keywords must literally appear in the JD (cached sets
   // were validated when first extracted).

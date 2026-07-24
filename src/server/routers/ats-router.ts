@@ -5,6 +5,7 @@ import { db } from '../db';
 import { resumes } from '../db/schema';
 import {
   analyzeResumeAts,
+  hashJd,
   normalizeResumeInput,
   type AnalyzedKeyword
 } from '../services/ats-analysis';
@@ -17,15 +18,6 @@ type KeywordCache = {
     aliases?: string[];
   }[];
 };
-
-// Stable hash of the JD so a cached keyword set is only reused while the JD is
-// unchanged (a re-tailor to a new JD invalidates it).
-function hashJd(jobTitle: string, jobDescription: string): string {
-  const s = `${jobTitle}\n${jobDescription}`;
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) h = (h * 33 + s.charCodeAt(i)) | 0;
-  return (h >>> 0).toString(36);
-}
 
 // Every entry must carry an aliases array — caches written before alias
 // matching existed are treated as a miss so they re-extract (once) with
@@ -124,14 +116,11 @@ export const atsRouter = j.router({
   // Analyze the CURRENT (client) resume content instead of the saved snapshot,
   // and recompute every call (a mutation is never cached). Used by the chat's
   // "ATS score" so the score always reflects the latest field values.
-  // `refresh: true` bypasses the JD keyword cache (re-extracts and re-caches) —
-  // the escape hatch when an extraction looks off.
   analyzeCurrent: privateProcedure
     .input(
       z.object({
         resumeId: z.string(),
-        resume: z.record(z.string(), z.any()),
-        refresh: z.boolean().optional()
+        resume: z.record(z.string(), z.any())
       })
     )
     .mutation(async ({ c, ctx, input }) => {
@@ -158,9 +147,7 @@ export const atsRouter = j.router({
       });
 
       const hash = hashJd(resume.jdJobTitle, resume.jdPostDetails);
-      const cached = input.refresh
-        ? null
-        : cachedKeywords(resume.atsKeywords, hash);
+      const cached = cachedKeywords(resume.atsKeywords, hash);
       const { keywords, ...report } = await analyzeResumeAts({
         jobTitle: resume.jdJobTitle,
         jobDescription: resume.jdPostDetails,

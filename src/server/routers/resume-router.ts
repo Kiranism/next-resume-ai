@@ -6,6 +6,7 @@ import { eq, desc, inArray, and, count } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { resumeFormSchema } from '@/features/resume/utils/form-schema';
 import { generateResumeContent } from '../services/ai-resume';
+import { extractJdKeywords, hashJd } from '../services/ats-analysis';
 
 export const resumeRouter = j.router({
   // Create a new resume
@@ -57,14 +58,20 @@ export const resumeRouter = j.router({
       }
 
       // Generate AI content BEFORE inserting, so a generation failure never
-      // leaves an orphan resume row in the database.
-      const aiGeneratedContent = await generateResumeContent(
-        {
-          ...resumeData,
-          profileId: input.profileId
-        },
-        profile
-      );
+      // leaves an orphan resume row in the database. The JD keyword set is
+      // extracted here too — in parallel, so it adds no latency — and stored
+      // with the row: extraction is a one-time step when the JD enters the
+      // system, so every later ATS analysis works from the same stable set.
+      const [aiGeneratedContent, jdKeywords] = await Promise.all([
+        generateResumeContent(
+          {
+            ...resumeData,
+            profileId: input.profileId
+          },
+          profile
+        ),
+        extractJdKeywords(resumeData.jd_job_title, resumeData.jd_post_details)
+      ]);
 
       // Insert the fully-populated resume in a single write.
       const newResume = {
@@ -83,6 +90,22 @@ export const resumeRouter = j.router({
         tools: aiGeneratedContent.tools,
         languages: aiGeneratedContent.languages,
         hiddenSections: [],
+        // Extraction can fail entirely (best = []) — leave the cache empty and
+        // the first analysis seeds it instead.
+        atsKeywords:
+          jdKeywords.length > 0
+            ? {
+                hash: hashJd(
+                  resumeData.jd_job_title,
+                  resumeData.jd_post_details
+                ),
+                keywords: jdKeywords.map((k) => ({
+                  term: k.term,
+                  importance: k.importance,
+                  aliases: k.aliases ?? []
+                }))
+              }
+            : null,
         updatedAt: new Date()
       };
       const [created] = await db.insert(resumes).values(newResume).returning();
