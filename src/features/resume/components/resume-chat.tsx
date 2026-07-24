@@ -486,70 +486,122 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
     );
   };
 
-  // Bullet-level writing critique — computed locally (no model call), rendered
-  // as an assistant message with per-bullet Rewrite buttons.
-  const handleWritingReview = () => {
-    const report = critiqueResume(normalizeForm(form.getValues()));
-    const clean = report.totalBullets - report.flaggedCount;
-    const content =
-      report.totalBullets === 0
-        ? 'No experience or project bullets to review yet — add some content first (or ask me to).'
-        : report.flaggedCount === 0 && report.summaryIssues.length === 0
-          ? `Your writing looks strong — all ${report.totalBullets} bullets pass the checks.`
-          : `Writing review: ${clean} of ${report.totalBullets} bullets look strong; ${report.flaggedCount} could hit harder.`;
+  // Bullet-level writing critique: deterministic checks + the AI coach pass
+  // (server, guided by the bullet-writer/quantifier skills) with per-bullet
+  // proposed rewrites. If the call fails, the local deterministic report still
+  // renders — the button never comes back empty-handed.
+  const handleWritingReview = async () => {
+    const messageId = createId();
     setMessages((prev) => [
       ...prev,
-      {
-        id: createId(),
-        role: 'assistant',
+      { id: messageId, role: 'assistant', content: '', writingLoading: true }
+    ]);
+
+    const finish = (report: WritingReport, note?: string) => {
+      const clean = report.totalBullets - report.flaggedCount;
+      const content =
+        report.totalBullets === 0
+          ? 'No experience or project bullets to review yet — add some content first (or ask me to).'
+          : report.flaggedCount === 0 && report.summaryIssues.length === 0
+            ? `Your writing looks strong — all ${report.totalBullets} bullets pass the checks.`
+            : `Writing review: ${clean} of ${report.totalBullets} bullets look strong; ${report.flaggedCount} could hit harder.${note ?? ''}`;
+      updateMessage(messageId, {
+        writingLoading: false,
         content,
         writingReport: report.totalBullets > 0 ? report : undefined
+      });
+    };
+
+    try {
+      const response = await client.ats.reviewWriting.$post({
+        resume: form.getValues()
+      });
+      const data = await response.json();
+      if (data && !('error' in data)) {
+        finish(data as WritingReport);
+      } else {
+        finish(
+          critiqueResume(normalizeForm(form.getValues())),
+          ' (AI coach unavailable — showing automated checks.)'
+        );
       }
-    ]);
+    } catch {
+      finish(
+        critiqueResume(normalizeForm(form.getValues())),
+        ' (AI coach unavailable — showing automated checks.)'
+      );
+    }
   };
 
   const REWRITE_RULES =
     'Start with a strong action verb, add a real metric where truthful (%, $, count, time, scale), keep it under 30 words, no first-person pronouns, and never invent employers, roles, dates, or numbers.';
 
-  // Rewrite ONE flagged bullet through the chat pipeline (merge-safe, undoable).
-  const handleRewriteBullet = (
-    bullet: BulletCritique,
-    report: WritingReport
-  ) => {
-    pendingWritingCountRef.current = report.flaggedCount;
-    const fixes = bullet.issues.map((i) => i.label).join('; ');
+  // Deterministic flagged count at click time — the recheck after apply uses
+  // the same local engine, so before → after compares like with like.
+  const localFlaggedCount = () =>
+    critiqueResume(normalizeForm(form.getValues())).flaggedCount;
+
+  // Rewrite ONE flagged bullet through the chat pipeline (merge-safe,
+  // undoable). When the AI coach proposed a rewrite, apply that exact text.
+  const handleRewriteBullet = (bullet: BulletCritique) => {
+    pendingWritingCountRef.current = localFlaggedCount();
     const where =
       bullet.section === 'jobs'
         ? `the "${bullet.itemLabel}" experience entry`
         : `the "${bullet.itemLabel}" project`;
+    if (bullet.rewrite) {
+      handleSend(
+        `In ${where}, replace this exact bullet: "${bullet.text}" with exactly: "${bullet.rewrite}" — keep any bracketed placeholders like [X]% as-is for me to fill in. Keep every other bullet and section unchanged.`
+      );
+      return;
+    }
+    const fixes = [
+      ...bullet.issues.map((i) => i.label),
+      ...(bullet.aiNotes ?? [])
+    ].join('; ');
     handleSend(
       `In ${where}, rewrite ONLY this bullet: "${bullet.text}" — issues to fix: ${fixes}. ${REWRITE_RULES} Keep every other bullet and section unchanged.`
     );
   };
 
-  // Fix the summary's flagged style issues.
+  // Fix the summary — with the coach's exact rewrite when available.
   const handleRewriteSummary = (report: WritingReport) => {
-    pendingWritingCountRef.current = report.flaggedCount;
-    const fixes = report.summaryIssues.map((i) => i.label).join('; ');
+    pendingWritingCountRef.current = localFlaggedCount();
+    if (report.summaryRewrite) {
+      handleSend(
+        `Replace my summary with exactly: "${report.summaryRewrite}" — keep any bracketed placeholders as-is for me to fill in. Keep every other section unchanged.`
+      );
+      return;
+    }
+    const fixes = [
+      ...report.summaryIssues.map((i) => i.label),
+      ...(report.summaryAiNotes ?? [])
+    ].join('; ');
     handleSend(
       `Rewrite my summary fixing these issues: ${fixes}. Keep it truthful, third-person implied (no "I"), specific, and under 80 words. Keep every other section unchanged.`
     );
   };
 
-  // Rewrite the worst offenders in one pass (capped so the edit stays focused).
+  // Apply the worst offenders in one pass (capped so the edit stays focused).
   const handleRewriteAllFlagged = (report: WritingReport) => {
-    pendingWritingCountRef.current = report.flaggedCount;
+    pendingWritingCountRef.current = localFlaggedCount();
     const top = report.flagged.slice(0, 6);
     const list = top
-      .map(
-        (b) =>
-          `- In ${b.section === 'jobs' ? `experience "${b.itemLabel}"` : `project "${b.itemLabel}"`}: "${b.text}" (fix: ${b.issues
-            .map((i) => i.label)
-            .join(', ')})`
-      )
+      .map((b) => {
+        const where =
+          b.section === 'jobs'
+            ? `experience "${b.itemLabel}"`
+            : `project "${b.itemLabel}"`;
+        return b.rewrite
+          ? `- In ${where}, replace: "${b.text}" with exactly: "${b.rewrite}"`
+          : `- In ${where}, rewrite: "${b.text}" (fix: ${[
+              ...b.issues.map((i) => i.label),
+              ...(b.aiNotes ?? [])
+            ].join(', ')})`;
+      })
       .join('\n');
     handleSend(
-      `Rewrite these resume bullets, each as a stronger achievement bullet. ${REWRITE_RULES} Keep all other bullets and sections unchanged.\n${list}`
+      `Apply these bullet rewrites. Where a replacement is given, use that exact text (keep bracketed placeholders like [X]% as-is). ${REWRITE_RULES} Keep all other bullets and sections unchanged.\n${list}`
     );
   };
 
@@ -677,7 +729,8 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
                     const isLoading =
                       message.role === 'assistant' &&
                       ((message.streaming && !message.content) ||
-                        message.atsLoading);
+                        message.atsLoading ||
+                        message.writingLoading);
 
                     return (
                       <MessageScrollerItem
@@ -698,7 +751,9 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
                               <span className='shimmer px-1 text-sm'>
                                 {message.atsLoading
                                   ? 'Analyzing ATS score…'
-                                  : 'Thinking…'}
+                                  : message.writingLoading
+                                    ? 'Reviewing your writing…'
+                                    : 'Thinking…'}
                               </span>
                             ) : (
                               <Bubble
@@ -914,8 +969,11 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
                                   </span>
                                 </div>
 
-                                {message.writingReport.summaryIssues.length >
-                                  0 && (
+                                {(message.writingReport.summaryIssues.length >
+                                  0 ||
+                                  (message.writingReport.summaryAiNotes
+                                    ?.length ?? 0) > 0 ||
+                                  message.writingReport.summaryRewrite) && (
                                   <div className='flex flex-col gap-1'>
                                     <span className='text-foreground font-medium'>
                                       Summary
@@ -928,19 +986,37 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
                                           </Badge>
                                         )
                                       )}
-                                      <button
-                                        type='button'
-                                        className='text-primary ml-1 font-medium underline-offset-2 hover:underline disabled:opacity-50'
-                                        disabled={busy}
-                                        onClick={() =>
-                                          handleRewriteSummary(
-                                            message.writingReport!
-                                          )
-                                        }
-                                      >
-                                        Fix
-                                      </button>
+                                      {(
+                                        message.writingReport.summaryAiNotes ??
+                                        []
+                                      ).map((note, i) => (
+                                        <Badge
+                                          key={`ai-${i}`}
+                                          variant='outline'
+                                        >
+                                          {note}
+                                        </Badge>
+                                      ))}
                                     </div>
+                                    {message.writingReport.summaryRewrite && (
+                                      <span className='text-muted-foreground italic'>
+                                        → {message.writingReport.summaryRewrite}
+                                      </span>
+                                    )}
+                                    <button
+                                      type='button'
+                                      className='text-primary self-start font-medium underline-offset-2 hover:underline disabled:opacity-50'
+                                      disabled={busy}
+                                      onClick={() =>
+                                        handleRewriteSummary(
+                                          message.writingReport!
+                                        )
+                                      }
+                                    >
+                                      {message.writingReport.summaryRewrite
+                                        ? 'Apply rewrite'
+                                        : 'Fix'}
+                                    </button>
                                   </div>
                                 )}
 
@@ -963,20 +1039,34 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
                                             {issue.label}
                                           </Badge>
                                         ))}
-                                        <button
-                                          type='button'
-                                          className='text-primary ml-1 font-medium underline-offset-2 hover:underline disabled:opacity-50'
-                                          disabled={busy}
-                                          onClick={() =>
-                                            handleRewriteBullet(
-                                              bullet,
-                                              message.writingReport!
-                                            )
-                                          }
-                                        >
-                                          Rewrite
-                                        </button>
+                                        {(bullet.aiNotes ?? []).map(
+                                          (note, k) => (
+                                            <Badge
+                                              key={`ai-${k}`}
+                                              variant='outline'
+                                            >
+                                              {note}
+                                            </Badge>
+                                          )
+                                        )}
                                       </div>
+                                      {bullet.rewrite && (
+                                        <span className='text-muted-foreground italic'>
+                                          → {bullet.rewrite}
+                                        </span>
+                                      )}
+                                      <button
+                                        type='button'
+                                        className='text-primary self-start font-medium underline-offset-2 hover:underline disabled:opacity-50'
+                                        disabled={busy}
+                                        onClick={() =>
+                                          handleRewriteBullet(bullet)
+                                        }
+                                      >
+                                        {bullet.rewrite
+                                          ? 'Apply rewrite'
+                                          : 'Rewrite'}
+                                      </button>
                                     </div>
                                   ))}
                                 {message.writingReport.flagged.length > 8 && (
@@ -1012,12 +1102,16 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
                                     }
                                   >
                                     <IconSparkles data-icon='inline-start' />
-                                    Rewrite{' '}
+                                    Apply{' '}
                                     {Math.min(
                                       6,
                                       message.writingReport.flagged.length
                                     )}{' '}
-                                    worst bullets
+                                    {message.writingReport.flagged.some(
+                                      (b) => b.rewrite
+                                    )
+                                      ? 'rewrites'
+                                      : 'bullet fixes'}
                                   </Button>
                                 )}
                               </div>

@@ -9,6 +9,7 @@ import {
   normalizeResumeInput,
   type AnalyzedKeyword
 } from '../services/ats-analysis';
+import { critiqueWritingWithAi } from '../services/writing-critique';
 
 type KeywordCache = {
   hash: string;
@@ -160,5 +161,31 @@ export const atsRouter = j.router({
       }
 
       return c.json({ ...report, keywords: clientKeywords(keywords) });
+    }),
+
+  // Bullet-level writing critique of the CURRENT (client) resume content:
+  // deterministic checks + the AI coach pass (Resume Bullet Writer/Quantifier
+  // guidance) with per-bullet proposed rewrites. Falls back to deterministic-
+  // only if the model call fails, so it always returns a report.
+  reviewWriting: privateProcedure
+    .input(
+      z.object({
+        resume: z.record(z.string(), z.any())
+      })
+    )
+    .mutation(async ({ c, input }) => {
+      const current = input.resume as Record<string, unknown>;
+      const normalized = normalizeResumeInput({
+        personalDetails: current.personal_details,
+        jobs: current.jobs,
+        educations: current.educations,
+        projects: current.projects,
+        skills: current.skills,
+        tools: current.tools,
+        languages: current.languages,
+        hiddenSections: current.hiddenSections
+      });
+      const report = await critiqueWritingWithAi(normalized);
+      return c.json(report);
     })
 });

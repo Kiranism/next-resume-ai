@@ -100,8 +100,9 @@ export interface ChatUiMessage {
   atsPrevScore?: number;
   // Local keyword check attached after an ATS-triggered edit applied.
   atsVerify?: AtsVerifyResult;
-  // Bullet-level writing critique (computed locally, no model call).
+  // Bullet-level writing critique; writingLoading while the AI coach pass runs.
   writingReport?: WritingReport;
+  writingLoading?: boolean;
   // Flagged-bullet count before → after a writing-triggered edit applied.
   writingDelta?: { before: number; after: number };
 }

@@ -28,6 +28,11 @@ export interface BulletCritique {
   bulletIndex: number;
   text: string;
   issues: BulletIssue[];
+  // Set by the AI coach pass (server): contextual notes the deterministic
+  // checks can't see, and a concrete proposed rewrite (may contain bracketed
+  // metric placeholders like "[X]%" — never invented numbers).
+  aiNotes?: string[];
+  rewrite?: string;
 }
 
 export interface WritingReport {
@@ -38,6 +43,9 @@ export interface WritingReport {
   // First words used to open 3+ bullets — monotonous verb choice.
   repeatedStarts: string[];
   summaryIssues: BulletIssue[];
+  // AI coach pass on the summary.
+  summaryAiNotes?: string[];
+  summaryRewrite?: string;
 }
 
 // Openers that describe duties instead of achievements.
