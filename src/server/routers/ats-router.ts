@@ -136,21 +136,26 @@ export const atsRouter = j.router({
 
       // Persist a freshly-extracted keyword set so the gap list stays stable on
       // the next analysis (only re-judging presence, not re-picking keywords).
+      // Best-effort: caching is an optimization, never let it fail the analysis.
       if (!cached && keywords.length > 0) {
-        await db
-          .update(resumes)
-          .set({
-            atsKeywords: {
-              hash,
-              keywords: keywords.map((k) => ({
-                term: k.term,
-                importance: k.importance
-              }))
-            }
-          })
-          .where(
-            and(eq(resumes.id, input.resumeId), eq(resumes.userId, user.id))
-          );
+        try {
+          await db
+            .update(resumes)
+            .set({
+              atsKeywords: {
+                hash,
+                keywords: keywords.map((k) => ({
+                  term: k.term,
+                  importance: k.importance
+                }))
+              }
+            })
+            .where(
+              and(eq(resumes.id, input.resumeId), eq(resumes.userId, user.id))
+            );
+        } catch (err) {
+          console.error('Failed to cache ATS keywords (non-fatal):', err);
+        }
       }
 
       return c.json(report);
