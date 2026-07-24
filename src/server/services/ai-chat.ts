@@ -55,7 +55,11 @@ const languageItem = z
 const chatResponseSchema = z.object({
   reply: z.string().catch(''),
   changes: z.array(z.string()).catch([]),
-  updatedResume: z.record(z.string(), z.any()).nullable().catch(null)
+  updatedResume: z.record(z.string(), z.any()).nullable().catch(null),
+  // Explicit deletions, keyed by section → the item(s) to remove (by identity).
+  // The ONLY channel that deletes data — omission never does (see
+  // mergeArrayById) — so an accidental drop can't destroy a list.
+  remove: z.record(z.string(), z.array(z.any())).nullable().catch(null)
 });
 
 type PersonalDetails = NonNullable<TResumeEditFormValues['personal_details']>;
@@ -190,6 +194,60 @@ function mergeResume(
   return { merged, skipped };
 }
 
+const LIST_SECTIONS = [
+  'jobs',
+  'educations',
+  'projects',
+  'skills',
+  'tools',
+  'languages'
+] as const;
+
+// Apply the model's EXPLICIT deletions. Each remove[section] entry identifies an
+// item — an object with its identifying field(s), or a bare string for the
+// single-key sections (projects/skills/tools/languages) — and matching items are
+// filtered out of the merged section. This is the ONLY path that removes data
+// (merges never shrink a list), so an accidental omission can't delete anything.
+// Returns the sections it actually removed from.
+function applyRemovals(
+  merged: TResumeEditFormValues,
+  remove: Record<string, unknown> | null | undefined
+): string[] {
+  if (!remove) return [];
+  const m = merged as unknown as Record<string, unknown>;
+  const removedFrom: string[] = [];
+  for (const section of LIST_SECTIONS) {
+    const entries = remove[section];
+    const arr = m[section];
+    if (
+      !Array.isArray(entries) ||
+      entries.length === 0 ||
+      !Array.isArray(arr)
+    ) {
+      continue;
+    }
+    const removeKeys = new Set(
+      entries
+        .map((e) =>
+          typeof e === 'string'
+            ? e.trim().toLowerCase()
+            : itemKey(section, e as Record<string, unknown>)
+        )
+        .filter((k) => k !== '')
+    );
+    if (removeKeys.size === 0) continue;
+    const kept = arr.filter(
+      (item) =>
+        !removeKeys.has(itemKey(section, item as Record<string, unknown>))
+    );
+    if (kept.length !== arr.length) {
+      m[section] = kept;
+      removedFrom.push(section);
+    }
+  }
+  return removedFrom;
+}
+
 function resumeForPrompt(resume: TResumeEditFormValues) {
   return {
     personal_details: resume.personal_details ?? {},
@@ -305,7 +363,7 @@ Rules:
 
 Respond with a SINGLE valid JSON object and NOTHING else — no markdown, no code
 fences, no text before or after:
-{"reply":"a short friendly 1-3 sentence reply — what you changed, or an answer to the user's question","changes":["one short bullet per concrete change"],"updatedResume": the sections you changed OR null}
+{"reply":"a short friendly 1-3 sentence reply — what you changed, or an answer to the user's question","changes":["one short bullet per concrete change"],"updatedResume": the sections you changed OR null,"remove": items to delete OR null}
 
 Field rules:
 - "reply": always present; shown to the user as plain text.
@@ -319,6 +377,14 @@ Field rules:
   "name"; jobs by "employer" + "jobTitle" + "startDate"; educations by "school" +
   "degree" + "startDate"; skills by "skill_name"; tools by "tool_name"; languages
   by "lang_name". Give a brand-new item a new identifying value.
+- "remove": ONLY when the user EXPLICITLY asks to delete/remove item(s). It is an
+  object keyed by section name, each value an array of the item(s) to delete,
+  identified by the SAME identifying field(s) as above — e.g.
+  {"projects":[{"name":"Old Project"}],"skills":[{"skill_name":"jQuery"}],
+  "jobs":[{"employer":"Acme","jobTitle":"Intern","startDate":"2019-06-01"}]}.
+  Deletion happens ONLY through "remove" — leaving an item out of "updatedResume"
+  never deletes it. Never remove anything the user did not clearly ask to remove.
+  Use null when deleting nothing.
 
 Section shapes for updatedResume (include only the ones you changed):
 {"personal_details":{"resume_job_title":"","fname":"","lname":"","email":"","phone":"","country":"","city":"","summary":"","linkedin":"","github":"","website":""},"jobs":[{"id":0,"jobTitle":"","employer":"","description":"","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","city":""}],"educations":[{"id":0,"school":"","degree":"","field":"","description":"","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","city":""}],"projects":[{"name":"","description":"","link":""}],"skills":[{"skill_name":"","proficiency_level":""}],"tools":[{"tool_name":"","proficiency_level":""}],"languages":[{"lang_name":"","proficiency_level":""}]}
@@ -419,14 +485,24 @@ export function parseChatEdit(
 
   const reply = parsed.data.reply.trim() || DEFAULT_REPLY;
 
-  if (!parsed.data.updatedResume) {
+  const hasEdit = !!parsed.data.updatedResume;
+  const hasRemoval =
+    !!parsed.data.remove && Object.keys(parsed.data.remove).length > 0;
+
+  // Neither an edit nor a deletion → plain reply, resume untouched.
+  if (!hasEdit && !hasRemoval) {
     return { reply, changes: parsed.data.changes, updatedResume: null };
   }
 
-  const { merged, skipped } = mergeResume(
-    currentResume,
-    parsed.data.updatedResume
-  );
+  const { merged, skipped } = hasEdit
+    ? mergeResume(
+        currentResume,
+        parsed.data.updatedResume as Record<string, unknown>
+      )
+    : { merged: { ...currentResume }, skipped: [] as string[] };
+
+  applyRemovals(merged, parsed.data.remove);
+
   const changes = [...parsed.data.changes];
   if (skipped.length > 0) {
     changes.push(
