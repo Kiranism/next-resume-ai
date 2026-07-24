@@ -46,9 +46,34 @@ export function AtsReportDialog({ resumeId }: { resumeId: string }) {
             <div className='flex items-baseline gap-2'>
               <span className='text-4xl font-bold'>{report.score}</span>
               <span className='text-muted-foreground'>
-                / 100 ATS match (estimate)
+                / 100 ATS readiness (estimate)
               </span>
             </div>
+
+            {(report.breakdown?.length ?? 0) > 0 && (
+              <div className='flex flex-col gap-1.5'>
+                {report.breakdown!.map((dim) => (
+                  <div
+                    key={dim.key}
+                    className='flex items-center gap-2 text-sm'
+                    title={dim.detail}
+                  >
+                    <span className='text-muted-foreground w-32 shrink-0 truncate'>
+                      {dim.label}
+                    </span>
+                    <div className='bg-muted h-2 flex-1 overflow-hidden rounded-full'>
+                      <div
+                        className='bg-primary h-full rounded-full'
+                        style={{ width: `${dim.score}%` }}
+                      />
+                    </div>
+                    <span className='w-8 shrink-0 text-right font-medium'>
+                      {dim.score}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {report.rationale && <p className='text-sm'>{report.rationale}</p>}
 

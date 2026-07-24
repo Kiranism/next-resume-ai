@@ -3,39 +3,19 @@ import { and, eq } from 'drizzle-orm';
 import { j, privateProcedure } from '../jstack';
 import { db } from '../db';
 import { resumes } from '../db/schema';
-import { analyzeResumeAts } from '../services/ats-analysis';
-
-// Build the text an ATS actually sees: sections the user hid from the rendered
-// resume (hiddenSections) are excluded, so their content can't inflate the
-// keyword match for a resume the recruiter never sees.
-function visibleResumeText(s: {
-  personalDetails: unknown;
-  jobs: unknown;
-  education: unknown;
-  projects: unknown;
-  skills: unknown;
-  tools: unknown;
-  languages: unknown;
-  hiddenSections: unknown;
-}): string {
-  const hidden = new Set(
-    Array.isArray(s.hiddenSections) ? (s.hiddenSections as string[]) : []
-  );
-  const pd = s.personalDetails as Record<string, unknown> | null | undefined;
-  return JSON.stringify({
-    personalDetails: hidden.has('summary') && pd ? { ...pd, summary: '' } : pd,
-    jobs: hidden.has('experience') ? [] : s.jobs,
-    education: hidden.has('education') ? [] : s.education,
-    projects: hidden.has('projects') ? [] : s.projects,
-    skills: hidden.has('skills') ? [] : s.skills,
-    tools: hidden.has('tools') ? [] : s.tools,
-    languages: hidden.has('languages') ? [] : s.languages
-  });
-}
+import {
+  analyzeResumeAts,
+  normalizeResumeInput,
+  type AnalyzedKeyword
+} from '../services/ats-analysis';
 
 type KeywordCache = {
   hash: string;
-  keywords: { term: string; importance: 'required' | 'preferred' }[];
+  keywords: {
+    term: string;
+    importance: 'required' | 'preferred';
+    aliases?: string[];
+  }[];
 };
 
 // Stable hash of the JD so a cached keyword set is only reused while the JD is
@@ -47,12 +27,18 @@ function hashJd(jobTitle: string, jobDescription: string): string {
   return (h >>> 0).toString(36);
 }
 
+// Every entry must carry an aliases array — caches written before alias
+// matching existed are treated as a miss so they re-extract (once) with
+// aliases included.
 function cachedKeywords(
   atsKeywords: unknown,
   hash: string
-): KeywordCache['keywords'] | null {
+): AnalyzedKeyword[] | null {
   const c = atsKeywords as KeywordCache | null | undefined;
-  return c && c.hash === hash && Array.isArray(c.keywords) ? c.keywords : null;
+  if (!c || c.hash !== hash || !Array.isArray(c.keywords)) return null;
+  return c.keywords.every((k) => Array.isArray(k.aliases))
+    ? (c.keywords as AnalyzedKeyword[])
+    : null;
 }
 
 // Store the freshly-extracted keyword set so the gap list stays stable next
@@ -62,13 +48,22 @@ async function persistKeywordCache(
   resumeId: string,
   userId: string,
   hash: string,
-  keywords: KeywordCache['keywords']
+  keywords: AnalyzedKeyword[]
 ): Promise<void> {
   if (keywords.length === 0) return;
   try {
     await db
       .update(resumes)
-      .set({ atsKeywords: { hash, keywords } })
+      .set({
+        atsKeywords: {
+          hash,
+          keywords: keywords.map((k) => ({
+            term: k.term,
+            importance: k.importance,
+            aliases: k.aliases ?? []
+          }))
+        }
+      })
       .where(and(eq(resumes.id, resumeId), eq(resumes.userId, userId)));
   } catch (err) {
     console.error('Failed to cache ATS keywords (non-fatal):', err);
@@ -89,10 +84,10 @@ export const atsRouter = j.router({
         return c.json({ error: 'Not found' }, 404);
       }
 
-      const resumeText = visibleResumeText({
+      const normalized = normalizeResumeInput({
         personalDetails: resume.personalDetails,
         jobs: resume.jobs,
-        education: resume.education,
+        educations: resume.education,
         projects: resume.projects,
         skills: resume.skills,
         tools: resume.tools,
@@ -105,16 +100,11 @@ export const atsRouter = j.router({
       const { keywords, ...report } = await analyzeResumeAts({
         jobTitle: resume.jdJobTitle,
         jobDescription: resume.jdPostDetails,
-        resumeText,
+        resume: normalized,
         cachedKeywords: cached
       });
       if (!cached) {
-        await persistKeywordCache(
-          resume.id,
-          user.id,
-          hash,
-          keywords.map((k) => ({ term: k.term, importance: k.importance }))
-        );
+        await persistKeywordCache(resume.id, user.id, hash, keywords);
       }
 
       return c.json(report);
@@ -123,11 +113,14 @@ export const atsRouter = j.router({
   // Analyze the CURRENT (client) resume content instead of the saved snapshot,
   // and recompute every call (a mutation is never cached). Used by the chat's
   // "ATS score" so the score always reflects the latest field values.
+  // `refresh: true` bypasses the JD keyword cache (re-extracts and re-caches) —
+  // the escape hatch when an extraction looks off.
   analyzeCurrent: privateProcedure
     .input(
       z.object({
         resumeId: z.string(),
-        resume: z.record(z.string(), z.any())
+        resume: z.record(z.string(), z.any()),
+        refresh: z.boolean().optional()
       })
     )
     .mutation(async ({ c, ctx, input }) => {
@@ -142,10 +135,10 @@ export const atsRouter = j.router({
       }
 
       const current = input.resume as Record<string, unknown>;
-      const resumeText = visibleResumeText({
+      const normalized = normalizeResumeInput({
         personalDetails: current.personal_details,
         jobs: current.jobs,
-        education: current.educations,
+        educations: current.educations,
         projects: current.projects,
         skills: current.skills,
         tools: current.tools,
@@ -154,21 +147,18 @@ export const atsRouter = j.router({
       });
 
       const hash = hashJd(resume.jdJobTitle, resume.jdPostDetails);
-      const cached = cachedKeywords(resume.atsKeywords, hash);
+      const cached = input.refresh
+        ? null
+        : cachedKeywords(resume.atsKeywords, hash);
       const { keywords, ...report } = await analyzeResumeAts({
         jobTitle: resume.jdJobTitle,
         jobDescription: resume.jdPostDetails,
-        resumeText,
+        resume: normalized,
         cachedKeywords: cached
       });
 
       if (!cached) {
-        await persistKeywordCache(
-          input.resumeId,
-          user.id,
-          hash,
-          keywords.map((k) => ({ term: k.term, importance: k.importance }))
-        );
+        await persistKeywordCache(input.resumeId, user.id, hash, keywords);
       }
 
       return c.json(report);

@@ -6,6 +6,7 @@ import {
   IconArrowBackUp,
   IconArrowUp,
   IconPencil,
+  IconRefresh,
   IconSparkles,
   IconTrash,
   IconX
@@ -337,7 +338,9 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
     setBusy(false);
   };
 
-  const handleAtsScore = async () => {
+  // `refresh` bypasses the cached JD keyword set (re-extracts it) — the escape
+  // hatch when the extracted keywords look off.
+  const handleAtsScore = async (refresh = false) => {
     const messageId = createId();
     // Remember the last score in this thread so we can show the improvement.
     const prevScore = [...messages].reverse().find((m) => m.atsReport)
@@ -351,7 +354,8 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
       // Analyze the CURRENT field values and recompute fresh every time.
       const response = await client.ats.analyzeCurrent.$post({
         resumeId,
-        resume: form.getValues()
+        resume: form.getValues(),
+        refresh
       });
       const data = await response.json();
       if (data && !('error' in data)) {
@@ -360,7 +364,7 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
           atsLoading: false,
           atsReport: report,
           atsPrevScore: prevScore,
-          content: `Your resume scores ${report.score}/100 for ATS keyword match.`
+          content: `Your resume scores ${report.score}/100 for ATS readiness.`
         });
       } else {
         updateMessage(messageId, {
@@ -400,6 +404,14 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
       );
     }
     handleSend(`Improve my resume for ATS. ${parts.join(' ')}`.trim());
+  };
+
+  // One-click apply for a single ATS suggestion — a targeted edit through the
+  // chat pipeline instead of the everything-at-once improve.
+  const handleApplySuggestion = (suggestion: string) => {
+    handleSend(
+      `Apply this ATS improvement as ONE targeted edit (keep everything else unchanged, never invent employers, roles, or dates): ${suggestion}`
+    );
   };
 
   const handleUndo = (messageId: string) => {
@@ -459,7 +471,7 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
           <Button
             variant='outline'
             size='sm'
-            onClick={handleAtsScore}
+            onClick={() => handleAtsScore()}
             disabled={busy}
             aria-label='Analyze ATS'
             className='gap-2'
@@ -607,6 +619,32 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
                                     )}
                                 </div>
 
+                                {(message.atsReport.breakdown?.length ?? 0) >
+                                  0 && (
+                                  <div className='flex flex-col gap-1.5'>
+                                    {message.atsReport.breakdown!.map((dim) => (
+                                      <div
+                                        key={dim.key}
+                                        className='flex items-center gap-2'
+                                        title={dim.detail}
+                                      >
+                                        <span className='text-muted-foreground w-28 shrink-0 truncate'>
+                                          {dim.label}
+                                        </span>
+                                        <div className='bg-muted h-1.5 flex-1 overflow-hidden rounded-full'>
+                                          <div
+                                            className='bg-primary h-full rounded-full'
+                                            style={{ width: `${dim.score}%` }}
+                                          />
+                                        </div>
+                                        <span className='text-foreground w-7 shrink-0 text-right font-medium'>
+                                          {dim.score}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
                                 {(message.atsReport.missingRequired?.length ??
                                   0) > 0 && (
                                   <div className='flex flex-col gap-1'>
@@ -671,28 +709,55 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
                                     <span className='text-foreground font-medium'>
                                       Suggestions
                                     </span>
-                                    <ul className='text-muted-foreground flex list-disc flex-col gap-0.5 pl-4'>
+                                    <ul className='text-muted-foreground flex list-disc flex-col gap-1 pl-4'>
                                       {message.atsReport.suggestions
-                                        .slice(0, 5)
+                                        .slice(0, 8)
                                         .map((suggestion, i) => (
-                                          <li key={i}>{suggestion}</li>
+                                          <li key={i}>
+                                            {suggestion}{' '}
+                                            <button
+                                              type='button'
+                                              className='text-primary font-medium underline-offset-2 hover:underline disabled:opacity-50'
+                                              disabled={busy}
+                                              onClick={() =>
+                                                handleApplySuggestion(
+                                                  suggestion
+                                                )
+                                              }
+                                            >
+                                              Apply
+                                            </button>
+                                          </li>
                                         ))}
                                     </ul>
                                   </div>
                                 )}
 
-                                <Button
-                                  variant='outline'
-                                  size='sm'
-                                  className='h-7 w-fit gap-1.5'
-                                  disabled={busy}
-                                  onClick={() =>
-                                    handleApplyAts(message.atsReport!)
-                                  }
-                                >
-                                  <IconSparkles data-icon='inline-start' />
-                                  Improve my resume with these
-                                </Button>
+                                <div className='flex flex-wrap items-center gap-2'>
+                                  <Button
+                                    variant='outline'
+                                    size='sm'
+                                    className='h-7 w-fit gap-1.5'
+                                    disabled={busy}
+                                    onClick={() =>
+                                      handleApplyAts(message.atsReport!)
+                                    }
+                                  >
+                                    <IconSparkles data-icon='inline-start' />
+                                    Improve my resume with these
+                                  </Button>
+                                  <Button
+                                    variant='ghost'
+                                    size='sm'
+                                    className='text-muted-foreground h-7 w-fit gap-1.5'
+                                    disabled={busy}
+                                    title='Keywords look off? Re-extract them from the job description.'
+                                    onClick={() => handleAtsScore(true)}
+                                  >
+                                    <IconRefresh data-icon='inline-start' />
+                                    Re-extract keywords
+                                  </Button>
+                                </div>
                               </div>
                             )}
 

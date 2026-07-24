@@ -1,103 +1,313 @@
 import { generateJsonContent } from './ai-model';
 import { ATS_ANALYSIS_GUIDANCE } from './resume-skills';
 
-export type AtsReport = {
-  score: number;
-  matchedKeywords: string[];
-  missingKeywords: string[];
-  // Missing split by importance (Resume ATS Optimizer criteria) so the UI can
-  // show must-haves separately from nice-to-haves.
-  missingRequired: string[];
-  missingPreferred: string[];
-  rationale: string;
-  suggestions: string[];
+// ---------------------------------------------------------------------------
+// Normalized resume — the single shape ATS analysis works on. Built from either
+// the DB row or the client form values (the router maps field names), with
+// hidden sections already excluded and Tiptap HTML stripped, so matching runs
+// against the words a recruiter actually reads — never JSON keys or tags.
+// ---------------------------------------------------------------------------
+
+export type NormalizedResume = {
+  name: string;
+  title: string; // resume_job_title
+  summary: string;
+  jobs: {
+    title: string;
+    employer: string;
+    location: string;
+    dates: string;
+    bullets: string[];
+  }[];
+  educations: {
+    school: string;
+    degree: string;
+    field: string;
+    bullets: string[];
+  }[];
+  projects: { name: string; bullets: string[] }[];
+  skills: string[];
+  tools: string[];
+  languages: string[];
 };
 
-type Importance = 'required' | 'preferred';
-// `present` is the model's semantic judgment (does the resume demonstrate this,
-// synonyms/equivalents included). It is OR'd with the deterministic exact-match
-// during scoring, so a literally-present keyword always counts.
-export type AnalyzedKeyword = {
-  term: string;
-  importance: Importance;
-  present?: boolean;
-};
+const str = (v: unknown): string => (typeof v === 'string' ? v : '');
+const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+const rec = (v: unknown): Record<string, unknown> =>
+  v && typeof v === 'object' ? (v as Record<string, unknown>) : {};
 
-// Collapse to lowercase alphanumerics so "Next.js", "NextJS", and "next js" all
-// become "nextjs" — punctuation/spacing variants match, which is what an ATS
-// keyword screen effectively does.
-function compact(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, '');
+// Tiptap descriptions are HTML — reduce to plain text lines.
+export function stripHtml(html: string): string {
+  return html
+    .replace(/<(br|\/p|\/li|\/div|\/h[1-6])[^>]*>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/[ \t]+/g, ' ')
+    .trim();
+}
+
+function toBullets(description: string): string[] {
+  return stripHtml(description)
+    .split(/\n+/)
+    .map((line) => line.replace(/^[\s•·◦*\-–—]+/, '').trim())
+    .filter((line) => line.length > 1);
+}
+
+// Map raw section data (DB row or client form values — inner item shapes are
+// identical) into a NormalizedResume, dropping hidden sections entirely so
+// their content can't inflate the match for a resume the recruiter never sees.
+export function normalizeResumeInput(input: {
+  personalDetails?: unknown;
+  jobs?: unknown;
+  educations?: unknown;
+  projects?: unknown;
+  skills?: unknown;
+  tools?: unknown;
+  languages?: unknown;
+  hiddenSections?: unknown;
+}): NormalizedResume {
+  const hidden = new Set(arr(input.hiddenSections).map((s) => String(s)));
+  const pd = rec(input.personalDetails);
+  const nameOf = (item: unknown, key: string): string =>
+    typeof item === 'string' ? item : str(rec(item)[key]);
+
+  return {
+    name: [str(pd.fname), str(pd.lname)].filter(Boolean).join(' '),
+    title: str(pd.resume_job_title),
+    summary: hidden.has('summary') ? '' : stripHtml(str(pd.summary)),
+    jobs: hidden.has('experience')
+      ? []
+      : arr(input.jobs).map((j) => {
+          const job = rec(j);
+          const dates = [str(job.startDate), str(job.endDate)]
+            .filter(Boolean)
+            .join(' – ');
+          return {
+            title: str(job.jobTitle),
+            employer: str(job.employer),
+            location: str(job.city),
+            dates,
+            bullets: toBullets(str(job.description))
+          };
+        }),
+    educations: hidden.has('education')
+      ? []
+      : arr(input.educations).map((e) => {
+          const edu = rec(e);
+          return {
+            school: str(edu.school),
+            degree: str(edu.degree),
+            field: str(edu.field),
+            bullets: toBullets(str(edu.description))
+          };
+        }),
+    projects: hidden.has('projects')
+      ? []
+      : arr(input.projects).map((p) => {
+          const proj = rec(p);
+          return {
+            name: str(proj.name),
+            bullets: toBullets(str(proj.description))
+          };
+        }),
+    skills: hidden.has('skills')
+      ? []
+      : arr(input.skills)
+          .map((s) => nameOf(s, 'skill_name'))
+          .filter(Boolean),
+    tools: hidden.has('tools')
+      ? []
+      : arr(input.tools)
+          .map((t) => nameOf(t, 'tool_name'))
+          .filter(Boolean),
+    languages: hidden.has('languages')
+      ? []
+      : arr(input.languages)
+          .map((l) => nameOf(l, 'lang_name'))
+          .filter(Boolean)
+  };
+}
+
+// The narrative text (summary + experience + projects + education) vs the flat
+// skill lists — used for "only in your skills list" placement hints.
+function narrativeText(r: NormalizedResume): string {
+  const lines: string[] = [];
+  if (r.name || r.title)
+    lines.push([r.name, r.title].filter(Boolean).join(' — '));
+  if (r.summary) lines.push(`Summary: ${r.summary}`);
+  for (const j of r.jobs) {
+    const head = [j.title, j.employer].filter(Boolean).join(', ');
+    const meta = [j.dates, j.location].filter(Boolean).join(' — ');
+    const line = head ? (meta ? `${head} (${meta})` : head) : meta;
+    if (line) lines.push(line);
+    for (const b of j.bullets) lines.push(`- ${b}`);
+  }
+  for (const p of r.projects) {
+    if (p.name) lines.push(p.name);
+    for (const b of p.bullets) lines.push(`- ${b}`);
+  }
+  for (const e of r.educations) {
+    const head = [e.degree, e.field].filter(Boolean).join(' in ');
+    lines.push([head, e.school].filter(Boolean).join(', '));
+    for (const b of e.bullets) lines.push(`- ${b}`);
+  }
+  return lines.join('\n');
+}
+
+function listText(r: NormalizedResume): string {
+  const lines: string[] = [];
+  if (r.skills.length) lines.push(`Skills: ${r.skills.join(', ')}`);
+  if (r.tools.length) lines.push(`Tools: ${r.tools.join(', ')}`);
+  if (r.languages.length) lines.push(`Languages: ${r.languages.join(', ')}`);
+  return lines.join('\n');
+}
+
+// Human-readable plain text of the visible resume: what the matcher scans and
+// what the model reads. Empty sections are omitted entirely — a bare
+// "education" section header must not satisfy an "education" keyword.
+export function resumeToPlainText(r: NormalizedResume): string {
+  const parts: string[] = [];
+  const narrative = narrativeText(r);
+  if (narrative) parts.push(narrative);
+  const lists = listText(r);
+  if (lists) parts.push(lists);
+  return parts.join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// Deterministic matcher — n-gram token index.
+//
+// The resume text is tokenized (lowercase alphanumeric runs) and every join of
+// 1–5 consecutive tokens is indexed in compact form. A keyword matches when its
+// own compact join is in the index:
+//   "Next.js" → "nextjs"  matches resume "NextJS" / "next js" / "Next.js"
+//   "CI/CD"   → "cicd"    matches "CI/CD" and "ci cd"
+//   "react"   does NOT match inside "reaction" (different token) — the old
+//   substring matcher false-positived here.
+// Single short tokens ("AI", "Go", "SQL") use a whole-word regex so they can't
+// hit inside other words ("trAIning").
+// ---------------------------------------------------------------------------
+
+const MAX_NGRAM = 5;
+
+function tokenize(s: string): string[] {
+  return s
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
 }
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// Deterministic presence test: is `keyword` in the resume text?
-//  - Multi-token terms ("CI/CD", "Next.js", "content management") match on their
-//    concatenated compact form, so punctuation/spacing variants all count.
-//  - A single LONG token (>=5, e.g. "kubernetes", "graphql") matches as a
-//    compact substring.
-//  - A single SHORT token ("AI", "Go", "SQL", "Java") requires a whole-word
-//    match, so it doesn't false-positive inside "trAIning" or "JavaScript".
-function resumeHasKeyword(
-  keyword: string,
-  resumeLower: string,
-  resumeCompact: string
-): boolean {
-  const tokens = keyword
-    .toLowerCase()
-    .split(/[^a-z0-9]+/)
-    .filter(Boolean);
-  if (tokens.length === 0) return false;
-  if (tokens.length >= 2) return resumeCompact.includes(tokens.join(''));
+export type MatchIndex = {
+  lower: string;
+  grams: Map<string, number>;
+};
 
-  const token = tokens[0];
-  if (token.length >= 5) return resumeCompact.includes(token);
-  try {
-    return new RegExp(`(^|[^a-z0-9])${escapeRegex(token)}([^a-z0-9]|$)`).test(
-      resumeLower
-    );
-  } catch {
-    return resumeCompact.includes(token);
+export function buildMatchIndex(text: string): MatchIndex {
+  const lower = text.toLowerCase();
+  const tokens = tokenize(lower);
+  const grams = new Map<string, number>();
+  for (let i = 0; i < tokens.length; i++) {
+    let joined = '';
+    for (let n = 0; n < MAX_NGRAM && i + n < tokens.length; n++) {
+      joined += tokens[i + n];
+      grams.set(joined, (grams.get(joined) ?? 0) + 1);
+    }
   }
+  return { lower, grams };
 }
 
-// Score per the Resume ATS Optimizer criteria: keywords split into REQUIRED
-// (must-have/critical) and PREFERRED (nice-to-have), scored by coverage with
-// required weighted heavily. A keyword counts as present if the model judged it
-// present (synonyms) OR it's a literal match — the literal match guarantees the
-// analyze→improve→re-analyze loop converges. Exported for unit testing.
+export function indexHasTerm(term: string, index: MatchIndex): boolean {
+  const tokens = tokenize(term);
+  if (tokens.length === 0) return false;
+  const joined = tokens.join('');
+  if (tokens.length === 1 && joined.length < 5) {
+    // Short single tokens need whole-word matching ("AI" ≠ "trAIning").
+    try {
+      return new RegExp(
+        `(^|[^a-z0-9])${escapeRegex(joined)}([^a-z0-9]|$)`
+      ).test(index.lower);
+    } catch {
+      return index.grams.has(joined);
+    }
+  }
+  return index.grams.has(joined);
+}
+
+function termCount(term: string, index: MatchIndex): number {
+  const joined = tokenize(term).join('');
+  return joined ? (index.grams.get(joined) ?? 0) : 0;
+}
+
+// ---------------------------------------------------------------------------
+// Keyword scoring (60% of the blended score)
+// ---------------------------------------------------------------------------
+
+type Importance = 'required' | 'preferred';
+
+// `aliases` are alternate literal forms an ATS-configured search accepts as the
+// same thing (acronym ↔ expansion, "React.js" ↔ "React"). A keyword counts as
+// matched when the exact term OR any alias literally appears — deterministic,
+// so the analyze→improve→re-analyze loop always converges. `present` is the
+// model's broader semantic judgment; it never affects the score, only the
+// "use the exact term" hint.
+export type AnalyzedKeyword = {
+  term: string;
+  importance: Importance;
+  aliases?: string[];
+  present?: boolean;
+};
+
 const PREFERRED_WEIGHT = 0.4;
+const STUFFING_THRESHOLD = 6;
 
 export function scoreAtsMatch(
   keywords: AnalyzedKeyword[],
-  resumeText: string
+  fullText: string,
+  narrative?: string,
+  lists?: string
 ): {
   matchedKeywords: string[];
   missingKeywords: string[];
   missingRequired: string[];
   missingPreferred: string[];
-  // Keywords literally MISSING but which the model judged the resume covers via
-  // a synonym/equivalent — surfaced as "add the exact term" guidance, NOT counted
-  // toward the score (a real ATS matches literally).
+  // Matched only via an alias — the exact JD term itself is absent.
+  aliasMatched: string[];
+  // Literally missing (term + aliases), but the model judged the resume covers
+  // it semantically — "add the exact term" guidance, never score credit.
   synonymCovered: string[];
+  // Matched, but only in the skills/tools lists — never demonstrated in a
+  // summary/experience/project line.
+  listOnly: string[];
+  stuffed: { term: string; count: number }[];
   score: number;
 } {
-  const resumeLower = resumeText.toLowerCase();
-  const resumeCompact = compact(resumeText);
+  const fullIdx = buildMatchIndex(fullText);
+  const narrativeIdx = narrative ? buildMatchIndex(narrative) : null;
+  const listIdx = lists ? buildMatchIndex(lists) : null;
 
   const seen = new Set<string>();
   const unique: AnalyzedKeyword[] = [];
   for (const k of keywords) {
     const term = (k?.term ?? '').trim();
-    const c = compact(term);
-    if (!c || seen.has(c)) continue;
-    seen.add(c);
+    const key = tokenize(term).join('');
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
     unique.push({
       term,
       importance: k.importance === 'preferred' ? 'preferred' : 'required',
+      aliases: (k.aliases ?? [])
+        .map((a) => String(a).trim())
+        .filter((a) => a && tokenize(a).join('') !== key)
+        .slice(0, 3),
       present: k.present === true
     });
   }
@@ -110,27 +320,44 @@ export function scoreAtsMatch(
   const missingKeywords: string[] = [];
   const missingRequired: string[] = [];
   const missingPreferred: string[] = [];
+  const aliasMatched: string[] = [];
   const synonymCovered: string[] = [];
+  const listOnly: string[] = [];
+  const stuffed: { term: string; count: number }[] = [];
   let reqTotal = 0;
   let reqMatched = 0;
   let prefTotal = 0;
   let prefMatched = 0;
+
   for (const kw of unique) {
-    // Score on LITERAL presence only — that's what an ATS keyword screen does.
-    // The model's semantic `present` flag doesn't inflate the score; it only
-    // marks "covered via a related term, add the exact keyword" for guidance.
-    const literal = resumeHasKeyword(kw.term, resumeLower, resumeCompact);
+    const exact = indexHasTerm(kw.term, fullIdx);
+    const viaAlias =
+      !exact && (kw.aliases ?? []).some((a) => indexHasTerm(a, fullIdx));
+    const matched = exact || viaAlias;
+
     if (kw.importance === 'required') {
       reqTotal++;
-      if (literal) reqMatched++;
+      if (matched) reqMatched++;
       else missingRequired.push(kw.term);
     } else {
       prefTotal++;
-      if (literal) prefMatched++;
+      if (matched) prefMatched++;
       else missingPreferred.push(kw.term);
     }
-    (literal ? matchedKeywords : missingKeywords).push(kw.term);
-    if (!literal && kw.present === true) synonymCovered.push(kw.term);
+    (matched ? matchedKeywords : missingKeywords).push(kw.term);
+    if (viaAlias) aliasMatched.push(kw.term);
+    if (!matched && kw.present === true) synonymCovered.push(kw.term);
+
+    if (matched && narrativeIdx && listIdx) {
+      const forms = [kw.term, ...(kw.aliases ?? [])];
+      const inNarrative = forms.some((f) => indexHasTerm(f, narrativeIdx));
+      const inLists = forms.some((f) => indexHasTerm(f, listIdx));
+      if (!inNarrative && inLists) listOnly.push(kw.term);
+    }
+    if (exact) {
+      const count = termCount(kw.term, fullIdx);
+      if (count >= STUFFING_THRESHOLD) stuffed.push({ term: kw.term, count });
+    }
   }
 
   const numerator = reqMatched + PREFERRED_WEIGHT * prefMatched;
@@ -142,30 +369,233 @@ export function scoreAtsMatch(
     missingKeywords,
     missingRequired,
     missingPreferred,
+    aliasMatched,
     synonymCovered,
+    listOnly,
+    stuffed,
     score
   };
 }
 
+// Deterministically drop extracted keywords that don't literally appear in the
+// JD — the model occasionally "extracts" a term the JD never says, which
+// poisons the denominator with an unmatchable requirement. Falls back to the
+// full list if validation would leave too few (heavily paraphrased JDs).
+export function filterKeywordsToJd(
+  keywords: AnalyzedKeyword[],
+  jdText: string
+): AnalyzedKeyword[] {
+  const jdIdx = buildMatchIndex(jdText);
+  const kept = keywords.filter((k) => indexHasTerm(k.term, jdIdx));
+  // Keep the validated list when a solid majority survives; if validation
+  // guts the list, the JD is paraphrase-heavy — trust the model instead.
+  return kept.length >= Math.max(3, Math.ceil(keywords.length / 2))
+    ? kept
+    : keywords;
+}
+
+// ---------------------------------------------------------------------------
+// Blended multi-dimension score
+// ---------------------------------------------------------------------------
+
+export type AtsDimension = {
+  key: 'keywords' | 'quantification' | 'title' | 'sections' | 'length';
+  label: string;
+  score: number; // 0-100
+  weight: number; // fraction of the overall score
+  detail: string;
+};
+
+export type AtsReport = {
+  score: number; // blended overall
+  keywordScore: number;
+  breakdown: AtsDimension[];
+  matchedKeywords: string[];
+  missingKeywords: string[];
+  missingRequired: string[];
+  missingPreferred: string[];
+  rationale: string;
+  suggestions: string[];
+};
+
+const TITLE_STOPWORDS = new Set([
+  'a',
+  'an',
+  'the',
+  'of',
+  'and',
+  'or',
+  'for',
+  'in',
+  'to',
+  'with',
+  'at',
+  'on'
+]);
+
+function titleDimension(jdTitle: string, r: NormalizedResume): AtsDimension {
+  const wanted = tokenize(jdTitle).filter((t) => !TITLE_STOPWORDS.has(t));
+  const titlesIdx = buildMatchIndex(
+    [r.title, ...r.jobs.map((j) => j.title)].filter(Boolean).join('\n')
+  );
+  if (wanted.length === 0) {
+    return {
+      key: 'title',
+      label: 'Title match',
+      score: 100,
+      weight: 0.1,
+      detail: 'No target job title set.'
+    };
+  }
+  const hit = wanted.filter((t) => indexHasTerm(t, titlesIdx)).length;
+  const score = Math.round((hit / wanted.length) * 100);
+  return {
+    key: 'title',
+    label: 'Title match',
+    score,
+    weight: 0.1,
+    detail: `${hit} of ${wanted.length} words from "${jdTitle.trim()}" appear in your titles.`
+  };
+}
+
+function quantificationDimension(r: NormalizedResume): {
+  dim: AtsDimension;
+  quantified: number;
+  bulletCount: number;
+} {
+  const bullets = [
+    ...r.jobs.flatMap((j) => j.bullets),
+    ...r.projects.flatMap((p) => p.bullets)
+  ];
+  const quantified = bullets.filter((b) => /\d/.test(b)).length;
+  // 50%+ of bullets carrying a metric = full marks (Resume Quantifier bar).
+  const score =
+    bullets.length === 0
+      ? 0
+      : Math.min(100, Math.round((quantified / bullets.length / 0.5) * 100));
+  return {
+    dim: {
+      key: 'quantification',
+      label: 'Quantified impact',
+      score,
+      weight: 0.15,
+      detail: `${quantified} of ${bullets.length} experience/project bullets include a number.`
+    },
+    quantified,
+    bulletCount: bullets.length
+  };
+}
+
+function sectionsDimension(r: NormalizedResume): AtsDimension {
+  const checks: [boolean, string][] = [
+    [r.summary.trim().length >= 30, 'summary'],
+    [r.jobs.length >= 1, 'experience'],
+    [r.educations.length >= 1, 'education'],
+    [r.skills.length + r.tools.length >= 3, 'skills']
+  ];
+  const missing = checks.filter(([ok]) => !ok).map(([, name]) => name);
+  const score = Math.round(
+    (checks.filter(([ok]) => ok).length / checks.length) * 100
+  );
+  return {
+    key: 'sections',
+    label: 'Core sections',
+    score,
+    weight: 0.1,
+    detail: missing.length
+      ? `Missing or thin: ${missing.join(', ')}.`
+      : 'Summary, experience, education, and skills all present.'
+  };
+}
+
+function lengthDimension(plainText: string): AtsDimension {
+  const words = tokenize(plainText).length;
+  const score =
+    words >= 400 && words <= 800
+      ? 100
+      : (words >= 250 && words < 400) || (words > 800 && words <= 1100)
+        ? 70
+        : 40;
+  return {
+    key: 'length',
+    label: 'Length',
+    score,
+    weight: 0.05,
+    detail: `${words} words (400–800 is the sweet spot).`
+  };
+}
+
+// Assemble the five weighted dimensions and the blended overall score.
+// Exported for unit testing (analyzeResumeAts needs a live model).
+export function buildAtsBreakdown(
+  resume: NormalizedResume,
+  jobTitle: string,
+  plainText: string,
+  kwScore: number,
+  kwMatched: number,
+  kwTotal: number
+): {
+  breakdown: AtsDimension[];
+  overall: number;
+  quantified: number;
+  bulletCount: number;
+} {
+  const keywordsDim: AtsDimension = {
+    key: 'keywords',
+    label: 'Keyword match',
+    score: kwScore,
+    weight: 0.6,
+    detail: `${kwMatched} of ${kwTotal} JD terms found (required terms weigh 2.5× preferred).`
+  };
+  const quant = quantificationDimension(resume);
+  const breakdown: AtsDimension[] = [
+    keywordsDim,
+    quant.dim,
+    titleDimension(jobTitle, resume),
+    sectionsDimension(resume),
+    lengthDimension(plainText)
+  ];
+  const overall = Math.round(
+    breakdown.reduce((sum, d) => sum + d.score * d.weight, 0)
+  );
+  return {
+    breakdown,
+    overall,
+    quantified: quant.quantified,
+    bulletCount: quant.bulletCount
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Full analysis
+// ---------------------------------------------------------------------------
+
 export async function analyzeResumeAts(input: {
   jobTitle: string;
   jobDescription: string;
-  resumeText: string;
+  resume: NormalizedResume;
   // A previously-extracted keyword set for this JD. When provided the model
   // REUSES it (only re-judging presence + suggestions), so the gap list stays
   // stable across analyses instead of drifting on every call.
   cachedKeywords?: AnalyzedKeyword[] | null;
 }): Promise<AtsReport & { keywords: AnalyzedKeyword[] }> {
+  const plainText = resumeToPlainText(input.resume);
   const cached =
     Array.isArray(input.cachedKeywords) && input.cachedKeywords.length > 0
       ? input.cachedKeywords
       : null;
 
   const keywordTask = cached
-    ? `Use EXACTLY this fixed keyword list — do NOT add, drop, or rename any:
-${JSON.stringify(cached.map((k) => ({ term: k.term, importance: k.importance })))}
+    ? `Use EXACTLY this fixed keyword list — do NOT add, drop, or rename any (keep each "aliases" list as given):
+${JSON.stringify(
+  cached.map((k) => ({
+    term: k.term,
+    importance: k.importance,
+    aliases: k.aliases ?? []
+  }))
+)}
 For each keyword set "present" to whether the RESUME already demonstrates it, counting synonyms/equivalents (e.g. "continuous integration" satisfies "CI/CD", "led a team" satisfies "leadership").`
-    : `Extract 12-20 keywords a resume must contain to pass ATS screening — hard skills, technologies, tools, methodologies, certifications, concrete qualifications (prefer specific screenable terms over generic soft skills). Classify EACH as "required" (must-have/critical: under Requirements, "must have", "X years", or repeated) or "preferred" (nice-to-have: "a plus", "preferred", mentioned once), and set "present" to whether the RESUME already demonstrates it, counting synonyms/equivalents.`;
+    : `Extract 12-20 keywords a resume must contain to pass ATS screening — hard skills, technologies, tools, methodologies, certifications, concrete qualifications (prefer specific screenable terms over generic soft skills). Every term must appear VERBATIM in the job description. Classify EACH as "required" (must-have/critical: under Requirements, "must have", "X years", or repeated) or "preferred" (nice-to-have: "a plus", "preferred", mentioned once). For each keyword also list up to 3 "aliases": alternate literal spellings an ATS search would accept as the SAME thing — acronym ↔ expansion ("CI/CD" ↔ "continuous integration"), product-name variants ("React.js" ↔ "React") — NOT broader concepts. Set "present" to whether the RESUME already demonstrates it, counting synonyms/equivalents.`;
 
   const prompt = `You are an ATS keyword analyst. Follow the Resume ATS Optimizer criteria in the reference guidance below.
 
@@ -174,8 +604,8 @@ JOB TITLE: ${input.jobTitle}
 JOB DESCRIPTION:
 ${input.jobDescription}
 
-RESUME (JSON):
-${input.resumeText}
+RESUME:
+${plainText}
 
 ${ATS_ANALYSIS_GUIDANCE}
 
@@ -183,8 +613,8 @@ ${keywordTask}
 
 Return ONLY this JSON object and nothing else:
 {
-  "keywords": [{"term": "React", "importance": "required", "present": true}, ...],
-  "suggestions": ["3-5 concrete edits that would raise the match, inserting missing REQUIRED keywords into the summary, skills, or a specific experience bullet"]
+  "keywords": [{"term": "React", "importance": "required", "aliases": ["React.js"], "present": true}, ...],
+  "suggestions": ["3-4 concrete edits that would raise the match; each must be ONE self-contained instruction naming the target section (summary, skills, or a specific job/project) and the exact keywords or text to add"]
 }
 List required keywords first.`;
 
@@ -196,24 +626,29 @@ List required keywords first.`;
     parsed = {};
   }
 
-  // Accept the classified shape ({term, importance, present}) or a bare string
-  // list (loose model output) — bare strings default to "required".
-  const keywords: AnalyzedKeyword[] = Array.isArray(parsed.keywords)
+  // Accept the classified shape ({term, importance, aliases, present}) or a
+  // bare string list (loose model output) — bare strings default to "required".
+  let keywords: AnalyzedKeyword[] = Array.isArray(parsed.keywords)
     ? parsed.keywords
         .map((k): AnalyzedKeyword | null => {
           if (typeof k === 'string') {
-            return { term: k, importance: 'required' };
+            return { term: k, importance: 'required', aliases: [] };
           }
           if (k && typeof k === 'object' && 'term' in k) {
             const obj = k as {
               term?: unknown;
               importance?: unknown;
+              aliases?: unknown;
               present?: unknown;
             };
             return {
               term: String(obj.term ?? ''),
               importance:
                 obj.importance === 'preferred' ? 'preferred' : 'required',
+              aliases: arr(obj.aliases)
+                .map((a) => String(a).trim())
+                .filter(Boolean)
+                .slice(0, 3),
               present: obj.present === true
             };
           }
@@ -222,67 +657,129 @@ List required keywords first.`;
         .filter((k): k is AnalyzedKeyword => k !== null && k.term.trim() !== '')
     : [];
 
-  const suggestions = Array.isArray(parsed.suggestions)
+  // Freshly-extracted keywords must literally appear in the JD (cached sets
+  // were validated when first extracted).
+  if (!cached && keywords.length > 0) {
+    keywords = filterKeywordsToJd(
+      keywords,
+      `${input.jobTitle}\n${input.jobDescription}`
+    );
+  }
+
+  const llmSuggestions = Array.isArray(parsed.suggestions)
     ? parsed.suggestions.map((x) => String(x).trim()).filter(Boolean)
     : [];
 
-  const {
-    matchedKeywords,
-    missingKeywords,
-    missingRequired,
-    missingPreferred,
-    synonymCovered,
-    score
-  } = scoreAtsMatch(keywords, input.resumeText);
+  const kw = scoreAtsMatch(
+    keywords,
+    plainText,
+    narrativeText(input.resume),
+    listText(input.resume)
+  );
 
-  const total = matchedKeywords.length + missingKeywords.length;
-  const band =
-    score >= 90
-      ? 'excellent'
-      : score >= 75
-        ? 'strong'
-        : score >= 60
-          ? 'good'
-          : score >= 50
-            ? 'a stretch'
-            : 'under-qualified';
-  const rationale =
-    total === 0
-      ? 'Could not extract keywords from the job description — add a job description to get an ATS match score.'
-      : `You match ${matchedKeywords.length} of ${total} key terms from the job description — ${score}% (${band}; aim for 80%+). Add the missing required keywords below — in your skills, and where truthful in your experience bullets and summary — to raise the score.`;
+  // ----- blended score -----
+  const { breakdown, overall, quantified, bulletCount } = buildAtsBreakdown(
+    input.resume,
+    input.jobTitle,
+    plainText,
+    kw.score,
+    kw.matchedKeywords.length,
+    kw.matchedKeywords.length + kw.missingKeywords.length
+  );
 
-  // "You cover these conceptually — use the exact term so an ATS matches" is the
-  // most actionable, honest guidance the semantic pass produces.
-  const synonymHint =
-    synonymCovered.length > 0
+  // ----- suggestions: exact-term hints, then LLM edits, then diagnostics -----
+  const hints: string[] = [];
+  if (kw.aliasMatched.length > 0) {
+    hints.push(
+      `Swap in the exact JD wording for: ${kw.aliasMatched
+        .slice(0, 6)
+        .join(
+          ', '
+        )} — you match via an equivalent term, but the verbatim keyword is what every ATS search hits.`
+    );
+  }
+  if (kw.synonymCovered.length > 0) {
+    hints.push(
+      `Use the EXACT job-description terms for these — your resume covers them with related wording, but an ATS matches literally: ${kw.synonymCovered
+        .slice(0, 6)
+        .join(', ')}.`
+    );
+  }
+
+  const diagnostics: string[] = [];
+  if (kw.listOnly.length > 0) {
+    diagnostics.push(
+      `Demonstrate these in an experience or project bullet — right now they only appear in your skills list: ${kw.listOnly
+        .slice(0, 5)
+        .join(', ')}.`
+    );
+  }
+  const quantDim = breakdown.find((d) => d.key === 'quantification')!;
+  if (bulletCount > 0 && quantDim.score < 70) {
+    diagnostics.push(
+      `Only ${quantified} of ${bulletCount} bullets include a number — quantify impact (%, $, users, time saved, scale).`
+    );
+  }
+  const titleDim = breakdown.find((d) => d.key === 'title')!;
+  if (titleDim.score < 100 && input.jobTitle.trim()) {
+    diagnostics.push(
+      `Mirror the target job title where truthful: the JD says "${input.jobTitle.trim()}"${
+        input.resume.title
+          ? ` but your resume title reads "${input.resume.title}"`
+          : ' and your resume has no title'
+      }.`
+    );
+  }
+  const lengthDim = breakdown.find((d) => d.key === 'length')!;
+  if (lengthDim.score < 100) {
+    diagnostics.push(`Adjust length: ${lengthDim.detail}`);
+  }
+  for (const s of kw.stuffed.slice(0, 2)) {
+    diagnostics.push(
+      `"${s.term}" appears ${s.count}× — vary the wording so it doesn't read as keyword stuffing.`
+    );
+  }
+
+  const fallback =
+    kw.missingRequired.length > 0
       ? [
-          `Use the EXACT job-description terms for these — your resume covers them with related wording, but an ATS matches literally: ${synonymCovered
+          `Add these missing required keywords where they fit your background: ${kw.missingRequired
             .slice(0, 8)
             .join(', ')}.`
         ]
       : [];
-  const baseSuggestions =
-    suggestions.length > 0
-      ? suggestions
-      : missingRequired.length > 0
-        ? [
-            `Add these missing required keywords where they fit your background: ${missingRequired
-              .slice(0, 8)
-              .join(', ')}.`
-          ]
-        : [
-            'Your resume already covers the required terms — tighten wording and quantify impact.'
-          ];
-  const finalSuggestions = [...synonymHint, ...baseSuggestions];
+  const suggestions = [
+    ...hints,
+    ...(llmSuggestions.length > 0 ? llmSuggestions.slice(0, 4) : fallback),
+    ...diagnostics.slice(0, 4)
+  ];
+
+  const total = kw.matchedKeywords.length + kw.missingKeywords.length;
+  const band =
+    overall >= 90
+      ? 'excellent'
+      : overall >= 75
+        ? 'strong'
+        : overall >= 60
+          ? 'good'
+          : overall >= 50
+            ? 'a stretch'
+            : 'needs work';
+  const rationale =
+    total === 0
+      ? 'Could not extract keywords from the job description — add a job description to get an ATS match score.'
+      : `Overall ${overall}/100 (${band}; aim for 80+). Keyword match is 60% of the score — you hit ${kw.matchedKeywords.length} of ${total} JD terms — blended with quantified impact, title match, core sections, and length (see breakdown).`;
 
   return {
-    score,
-    matchedKeywords,
-    missingKeywords,
-    missingRequired,
-    missingPreferred,
+    score: overall,
+    keywordScore: kw.score,
+    breakdown,
+    matchedKeywords: kw.matchedKeywords,
+    missingKeywords: kw.missingKeywords,
+    missingRequired: kw.missingRequired,
+    missingPreferred: kw.missingPreferred,
     rationale,
-    suggestions: finalSuggestions,
+    suggestions,
     keywords
   };
 }

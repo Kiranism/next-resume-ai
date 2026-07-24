@@ -29,7 +29,14 @@ export const resumes = pgTable('resumes', {
   // re-extracting a slightly different set each time.
   atsKeywords: jsonb('ats_keywords').$type<{
     hash: string;
-    keywords: { term: string; importance: 'required' | 'preferred' }[];
+    keywords: {
+      term: string;
+      importance: 'required' | 'preferred';
+      // Alternate literal forms an ATS search accepts ("CI/CD" ↔ "continuous
+      // integration"). Entries cached before aliases existed lack this and are
+      // treated as a cache miss (re-extracted once).
+      aliases?: string[];
+    }[];
   }>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()

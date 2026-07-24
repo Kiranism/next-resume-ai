@@ -34,9 +34,21 @@ export interface ChatFocus {
   key?: string; // identity for re-resolution
 }
 
-// ATS keyword report (mirrors the ats-analysis service output).
+// One dimension of the blended ATS score (keyword match, quantification, …).
+export interface AtsDimension {
+  key: string;
+  label: string;
+  score: number; // 0-100
+  weight: number; // fraction of the overall score
+  detail?: string;
+}
+
+// ATS report (mirrors the ats-analysis service output). `score` is the blended
+// multi-dimension score; `breakdown` holds the per-dimension sub-scores.
 export interface AtsReport {
   score: number;
+  keywordScore?: number;
+  breakdown?: AtsDimension[];
   matchedKeywords: string[];
   missingKeywords: string[];
   // Missing keywords split by importance (optional — older reports may omit them).
