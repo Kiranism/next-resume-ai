@@ -102,6 +102,17 @@ const PdfRenderer = ({ formData, templateId, actions }: TPdfRendererProps) => {
   const template = getTemplate(templateId);
   const Template = template?.component;
 
+  // "Ethan_Carter_Resume.pdf" — recruiter-friendly, per resume-file naming
+  // convention (never a timestamp).
+  const nameBase = [
+    formData?.personal_details?.fname,
+    formData?.personal_details?.lname
+  ]
+    .filter(Boolean)
+    .join('_')
+    .replace(/[\\/:*?"<>|\s]+/g, '_');
+  const downloadName = nameBase ? `${nameBase}_Resume.pdf` : 'Resume.pdf';
+
   const serialized = JSON.stringify(formData);
   const debouncedSerialized = useDebounce(serialized, 400);
 
@@ -239,10 +250,7 @@ const PdfRenderer = ({ formData, templateId, actions }: TPdfRendererProps) => {
               variant='outline'
               nativeButton={false}
               render={
-                <a
-                  href={urls[front] ?? undefined}
-                  download={`next-resume-${Date.now()}.pdf`}
-                />
+                <a href={urls[front] ?? undefined} download={downloadName} />
               }
             >
               <IconDownload className='mr-1 h-4 w-4' /> Download PDF

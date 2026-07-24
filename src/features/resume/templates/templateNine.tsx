@@ -3,6 +3,16 @@ import { Document, Page, Text, View } from '@react-pdf/renderer';
 import { createTw } from 'react-pdf-tailwind';
 import { ReactNode } from 'react';
 import { RichText } from './rich-text';
+import {
+  ContactLine,
+  LinkText,
+  docMeta,
+  formatDateRange,
+  isOversizedDescription,
+  mail,
+  plain,
+  url
+} from './shared';
 
 const tw = createTw({ theme: { extend: {} } });
 
@@ -14,50 +24,30 @@ const RULE = '#bdbdbd';
 const BOLD = 'Helvetica-Bold';
 const OBLIQUE = 'Helvetica-Oblique';
 
-const MONTHS = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec'
-];
-
-const fmt = (iso?: string) => {
-  if (!iso) return '';
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-  if (!m) return iso;
-  return `${MONTHS[Number(m[2]) - 1]}. ${m[1]}`;
-};
-
-const range = (start?: string, end?: string) => {
-  const a = fmt(start);
-  const b = end ? fmt(end) : start ? 'Present' : '';
-  if (a && b) return `${a} - ${b}`;
-  return a || b || '';
-};
-
 // Uppercase for the small-caps look this design uses on roles/subtitles.
 const caps = (s?: string | null) => (s || '').toUpperCase();
 
 type TResumeTemplateProps = { formData: TResumeEditFormValues };
 
-// Section header: bold title followed by a hairline rule to the right margin.
+// Section header (bold title + hairline rule) glued to the FIRST block inside
+// a wrap={false} View so it can never sit orphaned at the bottom of a page.
+// When the first block is too tall to be atomic (firstWraps), it flows and the
+// header row falls back to its minPresenceAhead. NOTE: the presence hint must
+// stay on the header ROW — putting it on the section container sends
+// react-pdf's paginator into an infinite loop once a child flows across pages.
 const Section = ({
   title,
+  first,
+  firstWraps = false,
   children
 }: {
   title: string;
-  children: ReactNode;
-}) => (
-  <View style={tw('mb-4')} minPresenceAhead={40}>
-    <View style={tw('flex flex-row items-center mb-3')}>
+  first?: ReactNode;
+  firstWraps?: boolean;
+  children?: ReactNode;
+}) => {
+  const heading = (
+    <View style={tw('flex flex-row items-center mb-3')} minPresenceAhead={40}>
       <Text style={[tw('text-[15px]'), { fontFamily: BOLD, color: HEAD }]}>
         {title}
       </Text>
@@ -65,43 +55,71 @@ const Section = ({
         style={[tw('flex-1 ml-3'), { borderTopWidth: 1, borderColor: RULE }]}
       />
     </View>
-    {children}
-  </View>
-);
+  );
+  return (
+    <View style={tw('mb-4')}>
+      {first != null ? (
+        <>
+          <View wrap={firstWraps}>
+            {heading}
+            {first}
+          </View>
+          {children}
+        </>
+      ) : (
+        <>
+          {heading}
+          {children}
+        </>
+      )}
+    </View>
+  );
+};
 
-// Left-bold / right-teal-italic header row used by every entry.
+// Left-bold / right-teal-italic header row used by every entry. When
+// `rightHref` is set the right side is a clickable link (e.g. project URLs).
 const EntryHead = ({
   left,
-  right
+  right,
+  rightHref
 }: {
   left: string;
   right?: string | null;
-}) => (
-  <View style={tw('flex flex-row justify-between items-baseline')}>
-    <Text
-      style={[tw('text-[11px] flex-1 pr-3'), { fontFamily: BOLD, color: HEAD }]}
-    >
-      {left}
-    </Text>
-    {right ? (
+  rightHref?: string;
+}) => {
+  const rightStyle = [
+    tw('text-[9px] shrink-0'),
+    { fontFamily: OBLIQUE, color: TEAL }
+  ];
+  return (
+    <View style={tw('flex flex-row justify-between items-baseline')}>
       <Text
         style={[
-          tw('text-[9px] shrink-0'),
-          { fontFamily: OBLIQUE, color: TEAL }
+          tw('text-[11px] flex-1 pr-3'),
+          { fontFamily: BOLD, color: HEAD }
         ]}
       >
-        {right}
+        {left}
       </Text>
-    ) : null}
-  </View>
-);
+      {right ? (
+        rightHref ? (
+          <LinkText href={rightHref} style={rightStyle}>
+            {right}
+          </LinkText>
+        ) : (
+          <Text style={rightStyle}>{right}</Text>
+        )
+      ) : null}
+    </View>
+  );
+};
 
 // Small-caps subrow: role/degree on the left, italic dates on the right.
 const SubRow = ({ left, right }: { left: string; right?: string }) => (
   <View style={tw('flex flex-row justify-between items-baseline mb-2')}>
     <Text
       style={[
-        tw('text-[8.5px] flex-1 pr-3'),
+        tw('text-[9px] flex-1 pr-3'),
         { color: MUTED, letterSpacing: 0.4 }
       ]}
     >
@@ -110,7 +128,7 @@ const SubRow = ({ left, right }: { left: string; right?: string }) => (
     {right ? (
       <Text
         style={[
-          tw('text-[8.5px] shrink-0'),
+          tw('text-[9px] shrink-0'),
           { fontFamily: OBLIQUE, color: MUTED }
         ]}
       >
@@ -154,16 +172,6 @@ export default function ResumeTemplateNine({ formData }: TResumeTemplateProps) {
   // Teal subtitle: the job role only.
   const subtitle = pd?.resume_job_title ?? '';
 
-  const contactLine = [
-    pd?.phone,
-    pd?.email,
-    pd?.website,
-    pd?.github,
-    pd?.linkedin
-  ]
-    .filter(Boolean)
-    .join('    |    ');
-
   const skillsList = skills
     .map((s) => s.skill_name)
     .filter(Boolean)
@@ -187,9 +195,73 @@ export default function ResumeTemplateNine({ formData }: TResumeTemplateProps) {
 
   const bodyStyle = [tw('text-[10px] leading-relaxed'), { color: INK }];
 
+  const renderJob = (job: (typeof jobs)[number], key: number) => {
+    const oversized = isOversizedDescription(job?.description);
+    return (
+      <View key={key} style={tw('mb-2.5')} wrap={oversized}>
+        <View wrap={false} minPresenceAhead={oversized ? 40 : undefined}>
+          <EntryHead left={caps(job?.employer)} right={job?.city} />
+          <SubRow
+            left={caps(job?.jobTitle)}
+            right={formatDateRange(job?.startDate, job?.endDate, 'short')}
+          />
+        </View>
+        <RichText
+          content={job?.description}
+          textStyle={bodyStyle}
+          gap={tw('mb-0.5')}
+        />
+      </View>
+    );
+  };
+
+  const renderProject = (proj: (typeof projects)[number], key: number) => {
+    const oversized = isOversizedDescription(proj?.description);
+    return (
+      <View key={key} style={tw('mb-2.5')} wrap={oversized}>
+        <View wrap={false} minPresenceAhead={oversized ? 40 : undefined}>
+          <EntryHead
+            left={proj?.name ?? ''}
+            right={proj?.link || ''}
+            rightHref={proj?.link || undefined}
+          />
+        </View>
+        <View style={tw('mt-2')}>
+          <RichText
+            content={proj?.description}
+            textStyle={bodyStyle}
+            gap={tw('mb-0.5')}
+          />
+        </View>
+      </View>
+    );
+  };
+
+  const renderEducation = (edu: (typeof educations)[number], key: number) => {
+    const oversized = isOversizedDescription(edu?.description);
+    return (
+      <View key={key} style={tw('mb-2')} wrap={oversized}>
+        <View wrap={false} minPresenceAhead={oversized ? 40 : undefined}>
+          <EntryHead left={edu?.school ?? ''} right={edu?.city} />
+          <SubRow
+            left={caps([edu?.degree, edu?.field].filter(Boolean).join(' in '))}
+            right={formatDateRange(edu?.startDate, edu?.endDate, 'short')}
+          />
+        </View>
+        {edu?.description ? (
+          <RichText
+            content={edu.description}
+            textStyle={bodyStyle}
+            gap={tw('mb-0.5')}
+          />
+        ) : null}
+      </View>
+    );
+  };
+
   return (
-    <Document>
-      <Page size='A4' style={[tw('px-12 pt-10 pb-14'), { color: INK }]}>
+    <Document {...docMeta(pd)}>
+      <Page size='A4' style={[tw('px-12 pt-12 pb-14'), { color: INK }]}>
         {/* Centered header */}
         <View style={tw('items-center mb-5')}>
           <Text style={[tw('text-[32px] leading-none'), { color: '#4a4a4a' }]}>
@@ -205,92 +277,82 @@ export default function ResumeTemplateNine({ formData }: TResumeTemplateProps) {
               {caps(subtitle)}
             </Text>
           ) : null}
-          {contactLine ? (
-            <Text style={[tw('text-[9px] text-center mt-2'), { color: MUTED }]}>
-              {contactLine}
-            </Text>
-          ) : null}
+          <ContactLine
+            items={[
+              plain(pd?.phone),
+              mail(pd?.email),
+              url(pd?.website),
+              url(pd?.github),
+              url(pd?.linkedin)
+            ]}
+            separator='|'
+            style={[tw('text-[9px] text-center mt-2'), { color: MUTED }]}
+          />
         </View>
 
         {!hidden.includes('summary') && summary ? (
-          <Section title='Summary'>
-            <Text style={bodyStyle}>{summary}</Text>
-          </Section>
+          <Section
+            title='Summary'
+            first={
+              <RichText
+                content={summary}
+                textStyle={bodyStyle}
+                gap={tw('mb-0.5')}
+              />
+            }
+            firstWraps={isOversizedDescription(summary)}
+          />
         ) : null}
 
         {hasTechSkills ? (
-          <Section title='Technical Skills'>
-            {!hidden.includes('skills') && skillsList ? (
-              <SkillRow label='Skills' value={skillsList} />
-            ) : null}
-            {!hidden.includes('tools') && toolsList ? (
-              <SkillRow label='Tools' value={toolsList} />
-            ) : null}
-            {!hidden.includes('languages') && languagesList ? (
-              <SkillRow label='Languages' value={languagesList} />
-            ) : null}
-          </Section>
+          <Section
+            title='Technical Skills'
+            first={
+              <>
+                {!hidden.includes('skills') && skillsList ? (
+                  <SkillRow label='Skills' value={skillsList} />
+                ) : null}
+                {!hidden.includes('tools') && toolsList ? (
+                  <SkillRow label='Tools' value={toolsList} />
+                ) : null}
+                {!hidden.includes('languages') && languagesList ? (
+                  <SkillRow label='Languages' value={languagesList} />
+                ) : null}
+              </>
+            }
+            firstWraps={isOversizedDescription(
+              [skillsList, toolsList, languagesList].join(', ')
+            )}
+          />
         ) : null}
 
         {!hidden.includes('experience') && jobs.length > 0 ? (
-          <Section title='Work Experience'>
-            {jobs.map((job, i) => (
-              <View key={i} style={tw('mb-2.5')} wrap={false}>
-                <EntryHead left={caps(job?.employer)} right={job?.city} />
-                <SubRow
-                  left={caps(job?.jobTitle)}
-                  right={range(job?.startDate, job?.endDate)}
-                />
-                <RichText
-                  content={job?.description}
-                  textStyle={bodyStyle}
-                  gap={tw('mb-0.5')}
-                />
-              </View>
-            ))}
+          <Section
+            title='Work Experience'
+            first={renderJob(jobs[0], 0)}
+            firstWraps={isOversizedDescription(jobs[0]?.description)}
+          >
+            {jobs.slice(1).map((job, i) => renderJob(job, i + 1))}
           </Section>
         ) : null}
 
         {!hidden.includes('projects') && projects.length > 0 ? (
-          <Section title='Projects'>
-            {projects.map((proj, i) => (
-              <View key={i} style={tw('mb-2.5')} wrap={false}>
-                <EntryHead
-                  left={proj?.name ?? ''}
-                  right={proj?.link ? 'View Project' : ''}
-                />
-                <View style={tw('mt-2')}>
-                  <RichText
-                    content={proj?.description}
-                    textStyle={bodyStyle}
-                    gap={tw('mb-0.5')}
-                  />
-                </View>
-              </View>
-            ))}
+          <Section
+            title='Projects'
+            first={renderProject(projects[0], 0)}
+            firstWraps={isOversizedDescription(projects[0]?.description)}
+          >
+            {projects.slice(1).map((proj, i) => renderProject(proj, i + 1))}
           </Section>
         ) : null}
 
         {!hidden.includes('education') && educations.length > 0 ? (
-          <Section title='Education'>
-            {educations.map((edu, i) => (
-              <View key={i} style={tw('mb-2')} wrap={false}>
-                <EntryHead left={edu?.school ?? ''} right={edu?.city} />
-                <SubRow
-                  left={caps(
-                    [edu?.degree, edu?.field].filter(Boolean).join(' in ')
-                  )}
-                  right={range(edu?.startDate, edu?.endDate)}
-                />
-                {edu?.description ? (
-                  <RichText
-                    content={edu.description}
-                    textStyle={bodyStyle}
-                    gap={tw('mb-0.5')}
-                  />
-                ) : null}
-              </View>
-            ))}
+          <Section
+            title='Education'
+            first={renderEducation(educations[0], 0)}
+            firstWraps={isOversizedDescription(educations[0]?.description)}
+          >
+            {educations.slice(1).map((edu, i) => renderEducation(edu, i + 1))}
           </Section>
         ) : null}
 

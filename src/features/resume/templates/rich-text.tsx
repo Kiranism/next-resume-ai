@@ -65,20 +65,31 @@ export function RichText({
 
   return (
     <View>
-      {blocks.map((b, i) =>
-        b.kind === 'bullet' ? (
-          <View key={i} style={flat(tw('flex flex-row'), gap)}>
-            <Text style={flat(bulletStyle ?? textStyle, tw('w-3'))}>•</Text>
-            <Text style={flat(textStyle, tw('flex-1'))}>
-              <Runs runs={b.runs} boldStyle={boldStyle} />
-            </Text>
-          </View>
-        ) : (
+      {blocks.map((b, i) => {
+        if (b.kind === 'bullet') {
+          // Keep each bullet row atomic: react-pdf doesn't fragment the text
+          // column of a flex row, so a row started in a sliver of page space
+          // strands its • marker at the page bottom while the text jumps to
+          // the next page. Whole rows move instead. Rows that could exceed a
+          // page (a single enormous bullet) are left free to fragment, since
+          // an unbreakable node taller than a page overprints itself.
+          const chars = b.runs.reduce((n, r) => n + r.text.length, 0);
+          const atomic = Math.ceil(chars / 90) * 17 < 500;
+          return (
+            <View key={i} style={flat(tw('flex flex-row'), gap)} wrap={!atomic}>
+              <Text style={flat(bulletStyle ?? textStyle, tw('w-3'))}>•</Text>
+              <Text style={flat(textStyle, tw('flex-1'))}>
+                <Runs runs={b.runs} boldStyle={boldStyle} />
+              </Text>
+            </View>
+          );
+        }
+        return (
           <Text key={i} style={flat(textStyle, gap)}>
             <Runs runs={b.runs} boldStyle={boldStyle} />
           </Text>
-        )
-      )}
+        );
+      })}
     </View>
   );
 }

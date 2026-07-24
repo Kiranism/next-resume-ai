@@ -3,6 +3,16 @@ import { Document, Page, Text, View } from '@react-pdf/renderer';
 import { createTw } from 'react-pdf-tailwind';
 import { ReactNode } from 'react';
 import { RichText } from './rich-text';
+import {
+  ContactLine,
+  LinkText,
+  docMeta,
+  formatDateRange,
+  isOversizedDescription,
+  mail,
+  plain,
+  url
+} from './shared';
 
 const tw = createTw({ theme: { extend: {} } });
 
@@ -12,21 +22,22 @@ type TResumeTemplateProps = {
   formData: TResumeEditFormValues;
 };
 
-// "2021-01-01 – 2023-05-01", "2021-01-01 – Present", or a single date.
-const dateRange = (start?: string, end?: string) => {
-  if (start && !end) return `${start} – Present`;
-  if (start && end) return `${start} – ${end}`;
-  return start || end || '';
-};
-
+// The heading and the FIRST block are glued inside a wrap={false} View so a
+// section header can never sit orphaned at the bottom of a page. When the
+// first block is too tall to be atomic (firstWraps), it flows instead and the
+// heading falls back to its minPresenceAhead.
 const Section = ({
   title,
+  first,
+  firstWraps = false,
   children
 }: {
   title: string;
-  children: ReactNode;
-}) => (
-  <View style={tw('mb-3.5')}>
+  first?: ReactNode;
+  firstWraps?: boolean;
+  children?: ReactNode;
+}) => {
+  const heading = (
     <Text
       style={[
         tw(
@@ -34,13 +45,30 @@ const Section = ({
         ),
         { fontFamily: BOLD }
       ]}
-      minPresenceAhead={28}
+      minPresenceAhead={40}
     >
       {title}
     </Text>
-    {children}
-  </View>
-);
+  );
+  return (
+    <View style={tw('mb-3.5')}>
+      {first != null ? (
+        <>
+          <View wrap={firstWraps}>
+            {heading}
+            {first}
+          </View>
+          {children}
+        </>
+      ) : (
+        <>
+          {heading}
+          {children}
+        </>
+      )}
+    </View>
+  );
+};
 
 export default function ResumeTemplateFive({ formData }: TResumeTemplateProps) {
   const pd = formData?.personal_details;
@@ -53,18 +81,146 @@ export default function ResumeTemplateFive({ formData }: TResumeTemplateProps) {
   const projects = formData?.projects ?? [];
   const hidden = formData?.hiddenSections ?? [];
 
-  const contactItems = [
-    pd?.email,
-    pd?.phone,
-    [pd?.city, pd?.country].filter(Boolean).join(', '),
-    pd?.linkedin,
-    pd?.github,
-    pd?.website
-  ].filter(Boolean) as string[];
+  const skillsText = skills
+    .map((s) => s.skill_name)
+    .filter(Boolean)
+    .join(', ');
+  const toolsText = tools
+    .map((t) => t.tool_name)
+    .filter(Boolean)
+    .join(', ');
+  const languagesText = languages
+    .map((l) =>
+      l.proficiency_level
+        ? `${l.lang_name} (${l.proficiency_level})`
+        : l.lang_name
+    )
+    .filter(Boolean)
+    .join(', ');
+
+  const renderJob = (job: (typeof jobs)[number], key: number) => {
+    const oversized = isOversizedDescription(job?.description);
+    return (
+      <View key={key} style={tw('mb-2.5')} wrap={oversized}>
+        <View wrap={false} minPresenceAhead={oversized ? 40 : undefined}>
+          <View style={tw('flex flex-row items-baseline gap-3')}>
+            <Text
+              style={[
+                tw('flex-1 text-[11px] text-[#111827]'),
+                { fontFamily: BOLD }
+              ]}
+            >
+              {job?.jobTitle ?? ''}
+              {job?.employer ? `, ${job.employer}` : ''}
+            </Text>
+            {job?.startDate || job?.endDate ? (
+              <Text style={tw('shrink-0 text-[9px] text-[#4b5563]')}>
+                {formatDateRange(job?.startDate, job?.endDate, 'short')}
+              </Text>
+            ) : null}
+          </View>
+          {job?.city ? (
+            <Text style={tw('text-[9px] text-[#6b7280] mt-0.5')}>
+              {job.city}
+            </Text>
+          ) : null}
+        </View>
+        {job?.description ? (
+          <View style={tw('mt-1')}>
+            <RichText
+              content={job.description}
+              textStyle={tw('text-[10px] leading-relaxed')}
+              gap={tw('mb-0.5')}
+            />
+          </View>
+        ) : null}
+      </View>
+    );
+  };
+
+  const renderProject = (proj: (typeof projects)[number], key: number) => {
+    const oversized = isOversizedDescription(proj?.description);
+    return (
+      <View key={key} style={tw('mb-2.5')} wrap={oversized}>
+        <View
+          wrap={false}
+          minPresenceAhead={oversized ? 40 : undefined}
+          style={tw('flex flex-row items-baseline gap-3')}
+        >
+          <Text
+            style={[
+              tw('flex-1 text-[11px] text-[#111827]'),
+              { fontFamily: BOLD }
+            ]}
+          >
+            {proj?.name ?? ''}
+          </Text>
+          {proj?.link ? (
+            <LinkText
+              href={proj.link}
+              style={tw('shrink-0 text-[9px] text-[#4b5563]')}
+            >
+              {proj.link}
+            </LinkText>
+          ) : null}
+        </View>
+        {proj?.description ? (
+          <View style={tw('mt-1')}>
+            <RichText
+              content={proj.description}
+              textStyle={tw('text-[10px] leading-relaxed')}
+              gap={tw('mb-0.5')}
+            />
+          </View>
+        ) : null}
+      </View>
+    );
+  };
+
+  const renderEducation = (edu: (typeof educations)[number], key: number) => {
+    const oversized = isOversizedDescription(edu?.description);
+    return (
+      <View key={key} style={tw('mb-2')} wrap={oversized}>
+        <View wrap={false} minPresenceAhead={oversized ? 40 : undefined}>
+          <View style={tw('flex flex-row items-baseline gap-3')}>
+            <Text
+              style={[
+                tw('flex-1 text-[11px] text-[#111827]'),
+                { fontFamily: BOLD }
+              ]}
+            >
+              {edu?.degree ?? ''}
+              {edu?.field ? ` in ${edu.field}` : ''}
+              {edu?.school ? `, ${edu.school}` : ''}
+            </Text>
+            {edu?.startDate || edu?.endDate ? (
+              <Text style={tw('shrink-0 text-[9px] text-[#4b5563]')}>
+                {formatDateRange(edu?.startDate, edu?.endDate, 'short')}
+              </Text>
+            ) : null}
+          </View>
+          {edu?.city ? (
+            <Text style={tw('text-[9px] text-[#6b7280] mt-0.5')}>
+              {edu.city}
+            </Text>
+          ) : null}
+        </View>
+        {edu?.description ? (
+          <View style={tw('mt-1')}>
+            <RichText
+              content={edu.description}
+              textStyle={tw('text-[10px] leading-relaxed')}
+              gap={tw('mb-0.5')}
+            />
+          </View>
+        ) : null}
+      </View>
+    );
+  };
 
   return (
-    <Document>
-      <Page size='A4' style={tw('px-12 py-10 text-[#1f2937]')}>
+    <Document {...docMeta(pd)}>
+      <Page size='A4' style={tw('px-12 py-12 text-[#1f2937]')}>
         {/* Header */}
         <View style={tw('mb-4')}>
           <Text
@@ -80,166 +236,96 @@ export default function ResumeTemplateFive({ formData }: TResumeTemplateProps) {
               {pd.resume_job_title}
             </Text>
           ) : null}
-          {contactItems.length > 0 ? (
-            <View style={tw('flex flex-row flex-wrap gap-x-2 gap-y-1 mt-1.5')}>
-              {contactItems.map((item, i) => (
-                <Text key={i} style={tw('text-[9px] text-[#4b5563]')}>
-                  {i > 0 ? '|  ' : ''}
-                  {item}
-                </Text>
-              ))}
-            </View>
-          ) : null}
+          <ContactLine
+            items={[
+              mail(pd?.email),
+              plain(pd?.phone),
+              plain([pd?.city, pd?.country].filter(Boolean).join(', ')),
+              url(pd?.linkedin),
+              url(pd?.github),
+              url(pd?.website)
+            ]}
+            separator='|'
+            style={tw('text-[9px] text-[#4b5563] mt-1.5')}
+          />
         </View>
 
         {!hidden.includes('summary') && summary ? (
-          <Section title='SUMMARY'>
-            <RichText
-              content={summary}
-              textStyle={tw('text-[10px] leading-relaxed')}
-              gap={tw('mb-0.5')}
-            />
-          </Section>
+          <Section
+            title='SUMMARY'
+            first={
+              <RichText
+                content={summary}
+                textStyle={tw('text-[10px] leading-relaxed')}
+                gap={tw('mb-0.5')}
+              />
+            }
+            firstWraps={isOversizedDescription(summary)}
+          />
         ) : null}
 
-        {!hidden.includes('skills') && skills.length > 0 ? (
-          <Section title='SKILLS'>
-            <Text style={tw('text-[10px] leading-relaxed')}>
-              {skills
-                .map((s) => s.skill_name)
-                .filter(Boolean)
-                .join(', ')}
-            </Text>
-          </Section>
+        {!hidden.includes('skills') && skillsText ? (
+          <Section
+            title='SKILLS'
+            first={
+              <Text style={tw('text-[10px] leading-relaxed')}>
+                {skillsText}
+              </Text>
+            }
+            firstWraps={isOversizedDescription(skillsText)}
+          />
         ) : null}
 
         {!hidden.includes('experience') && jobs.length > 0 ? (
-          <Section title='EXPERIENCE'>
-            {jobs.map((job, i) => (
-              <View key={i} style={tw('mb-2.5')} wrap={false}>
-                <View style={tw('flex flex-row items-baseline gap-3')}>
-                  <Text
-                    style={[
-                      tw('flex-1 text-[11px] text-[#111827]'),
-                      { fontFamily: BOLD }
-                    ]}
-                  >
-                    {job?.jobTitle ?? ''}
-                    {job?.employer ? `, ${job.employer}` : ''}
-                  </Text>
-                  {job?.startDate || job?.endDate ? (
-                    <Text style={tw('shrink-0 text-[9px] text-[#4b5563]')}>
-                      {dateRange(job?.startDate, job?.endDate)}
-                    </Text>
-                  ) : null}
-                </View>
-                {job?.city ? (
-                  <Text style={tw('text-[9px] text-[#6b7280] mt-0.5')}>
-                    {job.city}
-                  </Text>
-                ) : null}
-                {job?.description ? (
-                  <View style={tw('mt-1')}>
-                    <RichText
-                      content={job.description}
-                      textStyle={tw('text-[10px] leading-relaxed')}
-                      gap={tw('mb-0.5')}
-                    />
-                  </View>
-                ) : null}
-              </View>
-            ))}
+          <Section
+            title='EXPERIENCE'
+            first={renderJob(jobs[0], 0)}
+            firstWraps={isOversizedDescription(jobs[0]?.description)}
+          >
+            {jobs.slice(1).map((job, i) => renderJob(job, i + 1))}
           </Section>
         ) : null}
 
         {!hidden.includes('projects') && projects.length > 0 ? (
-          <Section title='PROJECTS'>
-            {projects.map((proj, i) => (
-              <View key={i} style={tw('mb-2.5')} wrap={false}>
-                <View style={tw('flex flex-row items-baseline gap-3')}>
-                  <Text
-                    style={[
-                      tw('flex-1 text-[11px] text-[#111827]'),
-                      { fontFamily: BOLD }
-                    ]}
-                  >
-                    {proj?.name ?? ''}
-                  </Text>
-                  {proj?.link ? (
-                    <Text style={tw('shrink-0 text-[9px] text-[#4b5563]')}>
-                      {proj.link}
-                    </Text>
-                  ) : null}
-                </View>
-                {proj?.description ? (
-                  <View style={tw('mt-1')}>
-                    <RichText
-                      content={proj.description}
-                      textStyle={tw('text-[10px] leading-relaxed')}
-                      gap={tw('mb-0.5')}
-                    />
-                  </View>
-                ) : null}
-              </View>
-            ))}
+          <Section
+            title='PROJECTS'
+            first={renderProject(projects[0], 0)}
+            firstWraps={isOversizedDescription(projects[0]?.description)}
+          >
+            {projects.slice(1).map((proj, i) => renderProject(proj, i + 1))}
           </Section>
         ) : null}
 
         {!hidden.includes('education') && educations.length > 0 ? (
-          <Section title='EDUCATION'>
-            {educations.map((edu, i) => (
-              <View key={i} style={tw('mb-2')} wrap={false}>
-                <View style={tw('flex flex-row items-baseline gap-3')}>
-                  <Text
-                    style={[
-                      tw('flex-1 text-[11px] text-[#111827]'),
-                      { fontFamily: BOLD }
-                    ]}
-                  >
-                    {edu?.degree ?? ''}
-                    {edu?.field ? ` in ${edu.field}` : ''}
-                    {edu?.school ? `, ${edu.school}` : ''}
-                  </Text>
-                  {edu?.startDate || edu?.endDate ? (
-                    <Text style={tw('shrink-0 text-[9px] text-[#4b5563]')}>
-                      {dateRange(edu?.startDate, edu?.endDate)}
-                    </Text>
-                  ) : null}
-                </View>
-                {edu?.description ? (
-                  <View style={tw('mt-1')}>
-                    <RichText
-                      content={edu.description}
-                      textStyle={tw('text-[10px] leading-relaxed')}
-                      gap={tw('mb-0.5')}
-                    />
-                  </View>
-                ) : null}
-              </View>
-            ))}
+          <Section
+            title='EDUCATION'
+            first={renderEducation(educations[0], 0)}
+            firstWraps={isOversizedDescription(educations[0]?.description)}
+          >
+            {educations.slice(1).map((edu, i) => renderEducation(edu, i + 1))}
           </Section>
         ) : null}
 
-        {!hidden.includes('tools') && tools.length > 0 ? (
-          <Section title='TOOLS'>
-            <Text style={tw('text-[10px] leading-relaxed')}>
-              {tools
-                .map((t) => t.tool_name)
-                .filter(Boolean)
-                .join(', ')}
-            </Text>
-          </Section>
+        {!hidden.includes('tools') && toolsText ? (
+          <Section
+            title='TOOLS'
+            first={
+              <Text style={tw('text-[10px] leading-relaxed')}>{toolsText}</Text>
+            }
+            firstWraps={isOversizedDescription(toolsText)}
+          />
         ) : null}
 
-        {!hidden.includes('languages') && languages.length > 0 ? (
-          <Section title='LANGUAGES'>
-            <Text style={tw('text-[10px] leading-relaxed')}>
-              {languages
-                .map((l) => l.lang_name)
-                .filter(Boolean)
-                .join(', ')}
-            </Text>
-          </Section>
+        {!hidden.includes('languages') && languagesText ? (
+          <Section
+            title='LANGUAGES'
+            first={
+              <Text style={tw('text-[10px] leading-relaxed')}>
+                {languagesText}
+              </Text>
+            }
+            firstWraps={isOversizedDescription(languagesText)}
+          />
         ) : null}
       </Page>
     </Document>
