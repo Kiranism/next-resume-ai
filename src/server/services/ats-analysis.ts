@@ -1,6 +1,6 @@
 import { generateJsonContent } from './ai-model';
 import { ATS_SCORING_GUIDELINES } from './resume-guidance';
-import { ATS_ANALYSIS_GUIDANCE } from './guidance';
+import { ATS_ANALYSIS_GUIDANCE } from './resume-skills';
 
 export type AtsReport = {
   score: number;

@@ -4,7 +4,7 @@ import {
 } from '@/features/resume/utils/form-schema';
 import { generateJsonContent } from './ai-model';
 import { ATS_WRITING_GUIDELINES } from './resume-guidance';
-import { RESUME_WRITING_GUIDANCE } from './guidance';
+import { RESUME_WRITING_GUIDANCE } from './resume-skills';
 import { z } from 'zod';
 import { Profile } from '@/server/db/schema/profiles';
 import { ProfileWithRelations } from '../routers/profile-router';
