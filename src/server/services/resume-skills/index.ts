@@ -33,10 +33,10 @@ ${docs.join('\n\n\n')}
 // Resume creation / editing: write strong, quantified, ATS-aligned, JD-tailored,
 // well-structured content.
 export const RESUME_WRITING_GUIDANCE = frame('Resume writing', [
+  tailor, // JD tailoring leads when creating a resume for a specific job
   atsOptimizer,
   bulletWriter,
   quantifier,
-  tailor,
   sectionBuilder,
   formatter,
   techResume

@@ -1,5 +1,4 @@
 import { generateJsonContent } from './ai-model';
-import { ATS_SCORING_GUIDELINES } from './resume-guidance';
 import { ATS_ANALYSIS_GUIDANCE } from './resume-skills';
 
 export type AtsReport = {
@@ -51,38 +50,62 @@ function resumeHasKeyword(
   }
 }
 
-// The deterministic core — exported so it can be unit-tested without an LLM.
-// Given the JD keywords and the resume text, partition matched/missing and score
-// by coverage. Adding a keyword to the resume ALWAYS moves it matched and raises
-// the score, which is what makes the analyze→improve→re-analyze loop converge.
-export function computeAtsMatch(
-  keywords: string[],
+type Importance = 'required' | 'preferred';
+type AnalyzedKeyword = { term: string; importance: Importance };
+
+// Score per the Resume ATS Optimizer criteria: the JD's keywords split into
+// REQUIRED (must-have/critical) and PREFERRED (nice-to-have), scored by coverage
+// with required weighted heavily. Presence is checked deterministically, so a
+// keyword that's literally in the resume ALWAYS counts — that's what keeps the
+// analyze→improve→re-analyze loop converging. Exported for unit testing.
+const PREFERRED_WEIGHT = 0.4;
+
+export function scoreAtsMatch(
+  keywords: AnalyzedKeyword[],
   resumeText: string
 ): { matchedKeywords: string[]; missingKeywords: string[]; score: number } {
   const resumeLower = resumeText.toLowerCase();
   const resumeCompact = compact(resumeText);
 
   const seen = new Set<string>();
-  const unique = keywords
-    .map((k) => k.trim())
-    .filter((k) => {
-      const c = compact(k);
-      if (!c || seen.has(c)) return false;
-      seen.add(c);
-      return true;
+  const unique: AnalyzedKeyword[] = [];
+  for (const k of keywords) {
+    const term = (k?.term ?? '').trim();
+    const c = compact(term);
+    if (!c || seen.has(c)) continue;
+    seen.add(c);
+    unique.push({
+      term,
+      importance: k.importance === 'preferred' ? 'preferred' : 'required'
     });
+  }
+  // Required first (Resume ATS Optimizer lists must-haves first).
+  unique.sort((a, b) =>
+    a.importance === b.importance ? 0 : a.importance === 'required' ? -1 : 1
+  );
 
   const matchedKeywords: string[] = [];
   const missingKeywords: string[] = [];
+  let reqTotal = 0;
+  let reqMatched = 0;
+  let prefTotal = 0;
+  let prefMatched = 0;
   for (const kw of unique) {
-    if (resumeHasKeyword(kw, resumeLower, resumeCompact))
-      matchedKeywords.push(kw);
-    else missingKeywords.push(kw);
+    const present = resumeHasKeyword(kw.term, resumeLower, resumeCompact);
+    if (kw.importance === 'required') {
+      reqTotal++;
+      if (present) reqMatched++;
+    } else {
+      prefTotal++;
+      if (present) prefMatched++;
+    }
+    (present ? matchedKeywords : missingKeywords).push(kw.term);
   }
 
-  const total = unique.length;
+  const numerator = reqMatched + PREFERRED_WEIGHT * prefMatched;
+  const denominator = reqTotal + PREFERRED_WEIGHT * prefTotal;
   const score =
-    total === 0 ? 0 : Math.round((matchedKeywords.length / total) * 100);
+    denominator === 0 ? 0 : Math.round((numerator / denominator) * 100);
   return { matchedKeywords, missingKeywords, score };
 }
 
@@ -91,10 +114,13 @@ export async function analyzeResumeAts(input: {
   jobDescription: string;
   resumeText: string;
 }): Promise<AtsReport> {
-  // The LLM does the part it's good at — understanding the JD and pulling out the
-  // keywords that matter. Matching + scoring are done deterministically below so
-  // the score is stable and moves only when the resume actually changes.
-  const prompt = `You are an ATS keyword analyst. From the JOB DESCRIPTION below, extract the most important keywords a resume MUST contain to pass ATS keyword screening for this role: hard skills, technologies, tools, methodologies, certifications, and concrete qualifications. Prefer specific, screenable terms ("React", "Next.js", "CI/CD", "Kubernetes", "content management") over generic soft skills.
+  // The LLM extracts + classifies the JD keywords following the Resume ATS
+  // Optimizer criteria (reference guidance). Matching + scoring stay
+  // deterministic so the score is stable and only moves when the resume changes.
+  const prompt = `You are an ATS keyword analyst. Follow the Resume ATS Optimizer criteria in the reference guidance below. From the JOB DESCRIPTION, extract the keywords a resume must contain to pass ATS screening — hard skills, technologies, tools, methodologies, certifications, concrete qualifications — and classify EACH as:
+- "required": must-have / critical (under Requirements, "must have", "X years", or mentioned repeatedly)
+- "preferred": nice-to-have / bonus ("a plus", "preferred", mentioned once)
+Prefer specific, screenable terms ("React", "Next.js", "CI/CD", "Kubernetes", "content management") over generic soft skills.
 
 JOB TITLE: ${input.jobTitle}
 
@@ -103,13 +129,12 @@ ${input.jobDescription}
 
 ${ATS_ANALYSIS_GUIDANCE}
 
-${ATS_SCORING_GUIDELINES}
-
 Return ONLY this JSON object and nothing else:
 {
-  "keywords": [12-20 keyword strings, each 1-4 words, most important first],
-  "suggestions": [3-5 concrete edits that would make the resume match this job better]
-}`;
+  "keywords": [{"term": "React", "importance": "required"}, ...],
+  "suggestions": ["3-5 concrete edits that would raise the match, inserting missing REQUIRED keywords into the summary, skills, or a specific experience bullet"]
+}
+Include 12-20 keywords, most important first.`;
 
   const raw = await generateJsonContent(prompt);
   let parsed: { keywords?: unknown; suggestions?: unknown } = {};
@@ -119,22 +144,51 @@ Return ONLY this JSON object and nothing else:
     parsed = {};
   }
 
-  const toStringArray = (v: unknown): string[] =>
-    Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean) : [];
+  // Accept both the classified shape ({term, importance}) and a bare string list
+  // (older/loose model output) — bare strings default to "required".
+  const keywords: AnalyzedKeyword[] = Array.isArray(parsed.keywords)
+    ? parsed.keywords
+        .map((k): AnalyzedKeyword | null => {
+          if (typeof k === 'string') {
+            return { term: k, importance: 'required' };
+          }
+          if (k && typeof k === 'object' && 'term' in k) {
+            const obj = k as { term?: unknown; importance?: unknown };
+            return {
+              term: String(obj.term ?? ''),
+              importance:
+                obj.importance === 'preferred' ? 'preferred' : 'required'
+            };
+          }
+          return null;
+        })
+        .filter((k): k is AnalyzedKeyword => k !== null && k.term.trim() !== '')
+    : [];
 
-  const keywords = toStringArray(parsed.keywords);
-  const suggestions = toStringArray(parsed.suggestions);
+  const suggestions = Array.isArray(parsed.suggestions)
+    ? parsed.suggestions.map((x) => String(x).trim()).filter(Boolean)
+    : [];
 
-  const { matchedKeywords, missingKeywords, score } = computeAtsMatch(
+  const { matchedKeywords, missingKeywords, score } = scoreAtsMatch(
     keywords,
     input.resumeText
   );
 
   const total = matchedKeywords.length + missingKeywords.length;
+  const band =
+    score >= 90
+      ? 'excellent'
+      : score >= 75
+        ? 'strong'
+        : score >= 60
+          ? 'good'
+          : score >= 50
+            ? 'a stretch'
+            : 'under-qualified';
   const rationale =
     total === 0
       ? 'Could not extract keywords from the job description — add a job description to get an ATS match score.'
-      : `Your resume contains ${matchedKeywords.length} of ${total} key terms from the job description (${score}%). Add the missing keywords below — in your skills, and where truthful in your experience bullets and summary — to raise your ATS match.`;
+      : `You match ${matchedKeywords.length} of ${total} key terms from the job description — ${score}% (${band}; aim for 80%+). Add the missing required keywords below — in your skills, and where truthful in your experience bullets and summary — to raise the score.`;
 
   const finalSuggestions =
     suggestions.length > 0
