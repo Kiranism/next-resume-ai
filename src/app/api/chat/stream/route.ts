@@ -7,7 +7,11 @@ import { resumes, resumeChatMessages } from '@/server/db/schema';
 import { buildChatPrompt, parseChatEdit } from '@/server/services/ai-chat';
 import { generateJsonContent } from '@/server/services/ai-model';
 import { TResumeEditFormValues } from '@/features/resume/utils/form-schema';
-import type { ChatMessage, ChatRole } from '@/features/resume/utils/chat-types';
+import type {
+  ChatFocus,
+  ChatMessage,
+  ChatRole
+} from '@/features/resume/utils/chat-types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -19,6 +23,7 @@ interface ChatStreamBody {
   resumeId: string;
   message: string;
   resume: TResumeEditFormValues;
+  focus?: ChatFocus | null;
 }
 
 function jsonLine(event: Record<string, unknown>): Uint8Array {
@@ -94,13 +99,15 @@ export async function POST(req: NextRequest) {
   }));
 
   const currentResume = body.resume ?? {};
+  const focus = body.focus ?? null;
   const prompt = buildChatPrompt({
     messages: [...priorTurns, { role: 'user', content: message }],
     resume: currentResume,
     jobContext: {
       jobTitle: resume.jdJobTitle,
       jobDescription: resume.jdPostDetails
-    }
+    },
+    focus
   });
 
   // Persist the user turn up front so it is never lost if the stream fails.

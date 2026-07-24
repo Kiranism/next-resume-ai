@@ -1,4 +1,5 @@
 import type { TResumeEditFormValues } from '../utils/form-schema';
+import type { ChatFocus } from '../utils/chat-types';
 
 interface DonePayload {
   reply: string;
@@ -21,6 +22,7 @@ export async function streamChatEdit(
     resumeId: string;
     message: string;
     resume: TResumeEditFormValues;
+    focus?: ChatFocus | null;
   },
   handlers: StreamHandlers
 ): Promise<void> {

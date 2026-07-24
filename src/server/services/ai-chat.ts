@@ -7,6 +7,7 @@ import {
 } from '@/features/resume/utils/form-schema';
 import type {
   ChatEditResult,
+  ChatFocus,
   ChatMessage
 } from '@/features/resume/utils/chat-types';
 import { ATS_WRITING_GUIDELINES } from './resume-guidance';
@@ -201,17 +202,68 @@ function resumeForPrompt(resume: TResumeEditFormValues) {
   };
 }
 
+// FOCUS prompt block: when the user scoped the chat to a specific item (via the
+// "@" picker), tell the model to edit ONLY that item and echo just that item
+// back. Sibling safety no longer depends on this — mergeArrayById preserves any
+// item the model omits regardless — so this purely removes the "which item did
+// they mean?" guess. Returns '' when there is no focus.
+function buildFocusBlock(
+  resume: TResumeEditFormValues,
+  focus: ChatFocus | null | undefined
+): string {
+  if (!focus) return '';
+
+  if (
+    typeof focus.index === 'number' &&
+    (focus.section === 'jobs' ||
+      focus.section === 'educations' ||
+      focus.section === 'projects')
+  ) {
+    const arr = resume[focus.section];
+    if (!Array.isArray(arr) || focus.index < 0 || focus.index >= arr.length) {
+      return '';
+    }
+    const item = arr[focus.index];
+    return `
+FOCUS — the user is targeting ONE specific item. Apply their request ONLY to
+this item, and return ONLY this item (per the list-section rule below). Do not
+touch any other item or section.
+Section: ${focus.section} (item #${focus.index})
+Item: ${JSON.stringify(item)}
+`;
+  }
+
+  if (focus.section === 'summary') {
+    return `
+FOCUS — the user is targeting the professional summary only. Apply their
+request ONLY to personal_details.summary; do not touch any other section.
+Current summary: ${JSON.stringify(resume.personal_details?.summary ?? '')}
+`;
+  }
+
+  // skills / tools / languages — whole-list sections (no per-item index).
+  const list = resume[focus.section] ?? [];
+  return `
+FOCUS — the user is targeting the "${focus.section}" list only. Apply their
+request ONLY to that list; do not touch any other section.
+Current ${focus.section}: ${JSON.stringify(list)}
+`;
+}
+
 export function buildChatPrompt(params: {
   messages: ChatMessage[];
   resume: TResumeEditFormValues;
   jobContext: { jobTitle: string; jobDescription: string };
+  focus?: ChatFocus | null;
 }): string {
-  const { messages, resume, jobContext } = params;
+  const { messages, resume, jobContext, focus } = params;
 
   const history = messages
     .slice(-MAX_HISTORY)
     .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
     .join('\n');
+
+  const focusBlock = buildFocusBlock(resume, focus);
 
   return `
 You are an expert resume assistant embedded in a resume builder. The user is
@@ -230,7 +282,7 @@ ${JSON.stringify(resumeForPrompt(resume))}
 
 Conversation so far:
 ${history || '(no previous messages)'}
-
+${focusBlock}
 Rules:
 - Only make the changes the user asked for. If they ask a broad request like
   "make it ATS friendly", improve the summary, skills, tools, and experience

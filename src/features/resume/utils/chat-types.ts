@@ -16,6 +16,24 @@ export interface ChatEditResult {
   updatedResume: TResumeEditFormValues | null;
 }
 
+// A specific resume item the chat is scoped to. `index` is set for array
+// sections (jobs/educations/projects); omitted for summary/skills/tools/
+// languages. `key` is a stable-ish identity snapshot used to re-resolve the
+// index at send time in case the user reordered/deleted items after picking.
+export interface ChatFocus {
+  section:
+    | 'summary'
+    | 'jobs'
+    | 'educations'
+    | 'projects'
+    | 'skills'
+    | 'tools'
+    | 'languages';
+  index?: number;
+  label: string; // e.g. "Project · Open Source Collaboration Tool"
+  key?: string; // identity for re-resolution
+}
+
 // ATS keyword report (mirrors the ats-analysis service output).
 export interface AtsReport {
   score: number;

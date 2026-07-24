@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import {
   IconArrowBackUp,
   IconArrowUp,
   IconPencil,
   IconSparkles,
-  IconTrash
+  IconTrash,
+  IconX
 } from '@tabler/icons-react';
 
 import { cn } from '@/lib/utils';
@@ -30,9 +31,18 @@ import {
   MessageScrollerProvider,
   MessageScrollerViewport
 } from '@/components/ui/message-scroller';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
 import { type TResumeEditFormValues } from '@/features/resume/utils/form-schema';
 import {
   type AtsReport,
+  type ChatFocus,
   type ChatUiMessage
 } from '@/features/resume/utils/chat-types';
 import { streamChatEdit } from '../api/chat-stream';
@@ -68,10 +78,136 @@ function createId() {
   }
 }
 
+const FOCUS_SECTION_LABELS: Record<ChatFocus['section'], string> = {
+  summary: 'Summary',
+  jobs: 'Experience',
+  educations: 'Education',
+  projects: 'Projects',
+  skills: 'Skills',
+  tools: 'Tools',
+  languages: 'Languages'
+};
+
+// Identity snapshot for an array-section item, used to re-find it by content
+// (not position) if the user reorders/edits the list after picking a focus.
+function keyFor(
+  section: ChatFocus['section'],
+  item: {
+    employer?: string;
+    startDate?: string;
+    school?: string;
+    name?: string;
+  }
+): string | undefined {
+  switch (section) {
+    case 'jobs':
+      return `${item.employer ?? ''}|${item.startDate ?? ''}`;
+    case 'educations':
+      return `${item.school ?? ''}|${item.startDate ?? ''}`;
+    case 'projects':
+      return `${item.name ?? ''}`;
+    default:
+      return undefined;
+  }
+}
+
+function matchesKey(
+  item:
+    | { employer?: string; startDate?: string; school?: string; name?: string }
+    | undefined,
+  focus: ChatFocus
+): boolean {
+  if (!item) return false;
+  return keyFor(focus.section, item) === focus.key;
+}
+
+// Addressable resume items for the "@" mention picker. Only non-empty
+// sections/arrays get an entry — see plan design decision #3.
+function buildFocusOptions(values: TResumeEditFormValues): ChatFocus[] {
+  const options: ChatFocus[] = [];
+
+  if (values.personal_details?.summary) {
+    options.push({ section: 'summary', label: 'Summary' });
+  }
+
+  (values.jobs ?? []).forEach((job, index) => {
+    options.push({
+      section: 'jobs',
+      index,
+      label: `Experience · ${job.employer || job.jobTitle || 'Untitled'}`,
+      key: keyFor('jobs', job)
+    });
+  });
+
+  (values.educations ?? []).forEach((education, index) => {
+    options.push({
+      section: 'educations',
+      index,
+      label: `Education · ${education.school || education.degree || 'Untitled'}`,
+      key: keyFor('educations', education)
+    });
+  });
+
+  (values.projects ?? []).forEach((project, index) => {
+    options.push({
+      section: 'projects',
+      index,
+      label: `Project · ${project.name || 'Untitled project'}`,
+      key: keyFor('projects', project)
+    });
+  });
+
+  if ((values.skills ?? []).length > 0) {
+    options.push({ section: 'skills', label: 'Skills' });
+  }
+  if ((values.tools ?? []).length > 0) {
+    options.push({ section: 'tools', label: 'Tools' });
+  }
+  if ((values.languages ?? []).length > 0) {
+    options.push({ section: 'languages', label: 'Languages' });
+  }
+
+  return options;
+}
+
+// Drift guard: re-resolve the focused item's index against live form values
+// at send time, since it may have moved (reorder) or been removed (delete)
+// since the chip was set. Non-indexed focuses (summary/skills/tools/
+// languages) have nothing to drift, so they pass through unchanged.
+function resolveFocusForSend(
+  currentFocus: ChatFocus | null,
+  values: TResumeEditFormValues
+): { resolved: ChatFocus | null; dropped: boolean } {
+  if (!currentFocus) return { resolved: null, dropped: false };
+  if (typeof currentFocus.index !== 'number') {
+    return { resolved: currentFocus, dropped: false };
+  }
+
+  const section = currentFocus.section as 'jobs' | 'educations' | 'projects';
+  const arr = values[section] ?? [];
+  const current = arr[currentFocus.index];
+  if (matchesKey(current, currentFocus)) {
+    return { resolved: currentFocus, dropped: false };
+  }
+
+  const foundIndex = arr.findIndex((item) => matchesKey(item, currentFocus));
+  if (foundIndex !== -1) {
+    return { resolved: { ...currentFocus, index: foundIndex }, dropped: false };
+  }
+
+  return { resolved: null, dropped: true };
+}
+
 export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
   const [messages, setMessages] = useState<ChatUiMessage[]>([GREETING]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  // Focus chip: the resume item the NEXT send is scoped to. Cleared right
+  // after it's used — context applies to one message, not the whole thread,
+  // so a reply about "this project" can't silently leak into later turns.
+  const [focus, setFocus] = useState<ChatFocus | null>(null);
+  const [focusMenuOpen, setFocusMenuOpen] = useState(false);
+  const [focusOptions, setFocusOptions] = useState<ChatFocus[]>([]);
   const seededRef = useRef(false);
 
   const { data: chatData, isLoading: isLoadingHistory } =
@@ -108,20 +244,41 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
 
     setInput('');
 
+    // Snapshot BEFORE applying edits so this turn's Undo can restore it.
+    const snapshot = form.getValues();
+
+    // Drift guard: re-resolve the focused item's index against live values in
+    // case it moved or was deleted since the chip was set.
+    const { resolved: resolvedFocus, dropped } = resolveFocusForSend(
+      focus,
+      snapshot
+    );
+    // Focus is single-use: this message consumes it, so the chip resets and
+    // the next message starts unscoped unless the user picks again.
+    setFocus(null);
+
     const assistantId = createId();
     setMessages((prev) => [
       ...prev,
       { id: createId(), role: 'user', content },
+      ...(dropped
+        ? [
+            {
+              id: createId(),
+              role: 'assistant' as const,
+              content:
+                'The item you selected no longer exists, so I edited the whole resume instead.'
+            }
+          ]
+        : []),
       { id: assistantId, role: 'assistant', content: '', streaming: true }
     ]);
 
-    // Snapshot BEFORE applying edits so this turn's Undo can restore it.
-    const snapshot = form.getValues();
     setBusy(true);
 
     // The server owns conversation history, so only the new message is sent.
     await streamChatEdit(
-      { resumeId, message: content, resume: snapshot },
+      { resumeId, message: content, resume: snapshot, focus: resolvedFocus },
       {
         onText: (chunk) =>
           setMessages((prev) =>
@@ -238,6 +395,21 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
       event.preventDefault();
       handleSend(input);
     }
+  };
+
+  // "@" mention trigger: typing "@" opens the same picker as the context
+  // button and is consumed (not sent as message text), mirroring the @-mention
+  // idiom from Slack/Notion/Linear so the picker is reachable without leaving
+  // the keyboard.
+  const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = event.target.value;
+    if (value.length > input.length && value.endsWith('@')) {
+      setInput(value.slice(0, -1));
+      setFocusOptions(buildFocusOptions(form.getValues()));
+      setFocusMenuOpen(true);
+      return;
+    }
+    setInput(value);
   };
 
   const showSuggestions = messages.length <= 1 && !busy;
@@ -500,15 +672,77 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
         </div>
       )}
 
+      {/* Focus chip: the resume item attached to the next message, if any */}
+      {focus && (
+        <div className='flex flex-wrap items-center gap-2'>
+          <Badge variant='secondary' className='gap-1 py-1 pr-1 pl-2.5'>
+            {focus.label}
+            <button
+              type='button'
+              onClick={() => setFocus(null)}
+              aria-label='Clear focused item'
+              className='hover:bg-foreground/10 ml-0.5 rounded-full p-0.5'
+            >
+              <IconX className='size-3' />
+            </button>
+          </Badge>
+        </div>
+      )}
+
+      {/* @ mention picker: opened only by typing "@" in the composer (see
+          handleInputChange) — no separate button, the trigger below exists
+          purely as an anchor point for the menu's positioning. */}
+      <DropdownMenu
+        open={focusMenuOpen}
+        onOpenChange={(open: boolean) => {
+          setFocusMenuOpen(open);
+          if (open) setFocusOptions(buildFocusOptions(form.getValues()));
+        }}
+      >
+        <DropdownMenuTrigger
+          type='button'
+          aria-hidden='true'
+          tabIndex={-1}
+          className='h-0 w-0 opacity-0'
+        />
+        <DropdownMenuContent align='start' className='max-h-72 w-64'>
+          {focusOptions.length === 0 ? (
+            <DropdownMenuItem disabled>
+              Nothing to focus on yet
+            </DropdownMenuItem>
+          ) : (
+            focusOptions.map((option, i) => {
+              const prevSection = i > 0 ? focusOptions[i - 1].section : null;
+              const showLabel = option.section !== prevSection;
+              return (
+                <Fragment key={`${option.section}-${option.index ?? 'all'}`}>
+                  {showLabel && (
+                    <>
+                      {i > 0 && <DropdownMenuSeparator />}
+                      <DropdownMenuLabel>
+                        {FOCUS_SECTION_LABELS[option.section]}
+                      </DropdownMenuLabel>
+                    </>
+                  )}
+                  <DropdownMenuItem onClick={() => setFocus(option)}>
+                    {option.label}
+                  </DropdownMenuItem>
+                </Fragment>
+              );
+            })
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
       {/* Composer */}
       <div className='flex items-end gap-2'>
         <Textarea
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           disabled={busy}
           rows={2}
-          placeholder='Ask the AI to edit your resume…'
+          placeholder='Ask the AI to edit your resume… (type @ to reference an item)'
           className='max-h-40 min-h-11 flex-1 resize-none'
         />
         <Button
