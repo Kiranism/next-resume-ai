@@ -1,4 +1,5 @@
 import { TResumeEditFormValues } from './form-schema';
+import type { WritingReport } from './bullet-critique';
 
 export type ChatRole = 'user' | 'assistant';
 
@@ -99,4 +100,8 @@ export interface ChatUiMessage {
   atsPrevScore?: number;
   // Local keyword check attached after an ATS-triggered edit applied.
   atsVerify?: AtsVerifyResult;
+  // Bullet-level writing critique (computed locally, no model call).
+  writingReport?: WritingReport;
+  // Flagged-bullet count before → after a writing-triggered edit applied.
+  writingDelta?: { before: number; after: number };
 }
