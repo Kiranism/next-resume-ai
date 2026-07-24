@@ -11,11 +11,6 @@ import type {
 } from '@/features/resume/utils/chat-types';
 import { ATS_WRITING_GUIDELINES } from './resume-guidance';
 
-// Boundary the model prints between its natural-language reply and the machine
-// edit payload. The streaming route shows everything BEFORE it as live text and
-// buffers everything after it as JSON.
-export const CHAT_EDIT_SENTINEL = '@@@EDIT@@@';
-
 const DEFAULT_REPLY = 'Done — let me know if you want anything else.';
 
 // Keep the last N turns so the prompt stays bounded on long conversations.
@@ -54,9 +49,10 @@ const languageItem = z
   )
   .catch({ lang_name: '', proficiency_level: '' });
 
-// Machine payload after the sentinel. `updatedResume` is loose here; the real
+// The model's single-JSON response. `updatedResume` is loose here; the real
 // safety comes from mergeResume(), which validates each section strictly.
-const editPayloadSchema = z.object({
+const chatResponseSchema = z.object({
+  reply: z.string().catch(''),
   changes: z.array(z.string()).catch([]),
   updatedResume: z.record(z.string(), z.any()).nullable().catch(null)
 });
@@ -179,63 +175,119 @@ Rules:
 - Write proficiency_level values as one of: Beginner, Intermediate, Advanced,
   Expert (skills/tools) or Basic, Conversational, Fluent, Native (languages).
 
-Respond in EXACTLY this format and nothing else:
-1. A short, friendly reply (1-3 sentences). If you edited the resume, briefly
-   say what you changed. This is shown to the user as plain text.
-2. Then a line containing only: ${CHAT_EDIT_SENTINEL}
-3. Then a single minified JSON object:
-   {"changes":["one short bullet per concrete change"],"updatedResume":{ full resume with your edits } or null}
+Respond with a SINGLE valid JSON object and NOTHING else — no markdown, no code
+fences, no text before or after:
+{"reply":"a short friendly 1-3 sentence reply — what you changed, or an answer to the user's question","changes":["one short bullet per concrete change"],"updatedResume": the sections you changed OR null}
 
-If you made no edits (e.g. the user only asked a question), still output your
-reply, then ${CHAT_EDIT_SENTINEL}, then {"changes":[],"updatedResume":null}.
+Field rules:
+- "reply": always present; shown to the user as plain text.
+- "updatedResume": include ONLY the sections you actually changed — omit every
+  section you did NOT touch (they are preserved automatically). Use null when you
+  made no edits (e.g. the user only asked a question).
+- When you change any part of a section, return that whole section (e.g. to edit
+  one project, return the full "projects" array with every project).
 
-The updatedResume shape (when not null):
+Section shapes for updatedResume (include only the ones you changed):
 {"personal_details":{"resume_job_title":"","fname":"","lname":"","email":"","phone":"","country":"","city":"","summary":"","linkedin":"","github":"","website":""},"jobs":[{"id":0,"jobTitle":"","employer":"","description":"","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","city":""}],"educations":[{"id":0,"school":"","degree":"","field":"","description":"","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","city":""}],"projects":[{"name":"","description":"","link":""}],"skills":[{"skill_name":"","proficiency_level":""}],"tools":[{"tool_name":"","proficiency_level":""}],"languages":[{"lang_name":"","proficiency_level":""}]}
 
-Example:
-I've tightened your summary and added a few ATS keywords for this role.
-${CHAT_EDIT_SENTINEL}
-{"changes":["Rewrote professional summary","Added 3 skills"],"updatedResume":{ ... }}
+Example (user asked to improve their projects):
+{"reply":"I expanded your projects with impact-focused bullets and bolded the key metrics.","changes":["Rewrote 2 project descriptions","Bolded key metrics"],"updatedResume":{"projects":[{"name":"Chat SDK","description":"- Built a realtime chat SDK adopted by **12k+** developers.\\n- Cut reconnect latency by **60%**.","link":"github.com/x/chat"}]}}
 `;
 }
 
-// Splits the full model output into the reply text and the merged edit result.
-// Runs the conservative merge so structured work history can't be corrupted.
-export function finalizeChatEdit(
-  fullText: string,
+// LLMs frequently emit RAW newlines/tabs inside JSON string values — e.g. the
+// multi-line "- " bullet descriptions this prompt now asks for — which is
+// invalid JSON and makes JSON.parse throw. Escape control chars that occur
+// INSIDE a string literal so the payload still parses. Already-escaped
+// sequences (a literal backslash-n, two chars) are left untouched.
+function escapeRawControlCharsInStrings(json: string): string {
+  let out = '';
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < json.length; i++) {
+    const ch = json[i];
+    if (escaped) {
+      out += ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      out += ch;
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      out += ch;
+      continue;
+    }
+    if (inString) {
+      if (ch === '\n') {
+        out += '\\n';
+        continue;
+      }
+      if (ch === '\r') {
+        out += '\\r';
+        continue;
+      }
+      if (ch === '\t') {
+        out += '\\t';
+        continue;
+      }
+    }
+    out += ch;
+  }
+  return out;
+}
+
+// Parse the model's edit JSON, tolerating raw control chars inside strings.
+function parseEditJson(jsonPart: string): unknown {
+  try {
+    return JSON.parse(jsonPart);
+  } catch {
+    try {
+      return JSON.parse(escapeRawControlCharsInStrings(jsonPart));
+    } catch {
+      return undefined;
+    }
+  }
+}
+
+// Parse the model's single-JSON response into the reply and the merged edit.
+// The response comes back from json_object mode so it is valid JSON;
+// parseEditJson's repair stays as a belt-and-suspenders fallback. mergeResume
+// keeps structured work history safe.
+export function parseChatEdit(
+  rawResponse: string,
   currentResume: TResumeEditFormValues
 ): ChatEditResult {
-  const sentinelIndex = fullText.indexOf(CHAT_EDIT_SENTINEL);
-
-  if (sentinelIndex === -1) {
-    return {
-      reply: fullText.trim() || DEFAULT_REPLY,
-      changes: [],
-      updatedResume: null
-    };
-  }
-
-  const reply = fullText.slice(0, sentinelIndex).trim() || DEFAULT_REPLY;
-  const jsonPart = fullText
-    .slice(sentinelIndex + CHAT_EDIT_SENTINEL.length)
+  const jsonPart = rawResponse
     .trim()
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```$/, '')
     .trim();
 
-  let parsed: z.SafeParseReturnType<unknown, z.infer<typeof editPayloadSchema>>;
-  try {
-    parsed = editPayloadSchema.safeParse(JSON.parse(jsonPart));
-  } catch {
-    return { reply, changes: [], updatedResume: null };
+  const data = parseEditJson(jsonPart);
+  if (data === undefined) {
+    console.warn(
+      '[chat] response JSON failed to parse; no changes applied. Tail:',
+      jsonPart.slice(0, 300)
+    );
+    return { reply: DEFAULT_REPLY, changes: [], updatedResume: null };
   }
 
-  if (!parsed.success || !parsed.data.updatedResume) {
-    return {
-      reply,
-      changes: parsed.success ? parsed.data.changes : [],
-      updatedResume: null
-    };
+  const parsed = chatResponseSchema.safeParse(data);
+  if (!parsed.success) {
+    console.warn(
+      '[chat] response failed schema validation; no changes applied.'
+    );
+    return { reply: DEFAULT_REPLY, changes: [], updatedResume: null };
+  }
+
+  const reply = parsed.data.reply.trim() || DEFAULT_REPLY;
+
+  if (!parsed.data.updatedResume) {
+    return { reply, changes: parsed.data.changes, updatedResume: null };
   }
 
   const { merged, skipped } = mergeResume(

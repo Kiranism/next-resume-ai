@@ -4,12 +4,8 @@ import { nanoid } from 'nanoid';
 import { currentUser } from '@clerk/nextjs/server';
 import { db } from '@/server/db';
 import { resumes, resumeChatMessages } from '@/server/db/schema';
-import {
-  buildChatPrompt,
-  finalizeChatEdit,
-  CHAT_EDIT_SENTINEL
-} from '@/server/services/ai-chat';
-import { streamChatCompletion } from '@/server/services/ai-model';
+import { buildChatPrompt, parseChatEdit } from '@/server/services/ai-chat';
+import { generateJsonContent } from '@/server/services/ai-model';
 import { TResumeEditFormValues } from '@/features/resume/utils/form-schema';
 import type { ChatMessage, ChatRole } from '@/features/resume/utils/chat-types';
 
@@ -118,45 +114,16 @@ export async function POST(req: NextRequest) {
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      let full = '';
-      let emitted = 0; // chars of `full` already sent as `text`
-      let sentinelIndex = -1;
-      let replyComplete = false;
-
       try {
-        await streamChatCompletion(prompt, (delta) => {
-          full += delta;
+        // Structured JSON output (json_object mode) returns guaranteed-valid
+        // JSON, so the edit payload can't be silently dropped by a malformed
+        // hand-written blob. The reply is delivered as one chunk (the tradeoff
+        // vs. token-by-token streaming) then the edit is applied.
+        const raw = await generateJsonContent(prompt);
+        const result = parseChatEdit(raw, currentResume);
 
-          if (sentinelIndex === -1) {
-            const found = full.indexOf(CHAT_EDIT_SENTINEL);
-            if (found !== -1) sentinelIndex = found;
-          }
-
-          // Emit only text before the sentinel; hold back a sentinel's worth of
-          // chars so a boundary split across deltas never leaks as visible text.
-          const safeEnd =
-            sentinelIndex !== -1
-              ? sentinelIndex
-              : Math.max(0, full.length - CHAT_EDIT_SENTINEL.length);
-
-          if (safeEnd > emitted) {
-            const chunk = full.slice(emitted, safeEnd);
-            emitted = safeEnd;
-            controller.enqueue(jsonLine({ type: 'text', value: chunk }));
-          }
-
-          // Reply text is done; the (larger) edit JSON is still generating —
-          // tell the client so it can show an "applying changes" indicator.
-          if (sentinelIndex !== -1 && !replyComplete) {
-            replyComplete = true;
-            controller.enqueue(jsonLine({ type: 'reply-complete' }));
-          }
-        });
-
-        const result = finalizeChatEdit(full, currentResume);
-
-        // Send the result to the client FIRST (the important part), then persist
-        // the turn best-effort — a DB blip must not turn a good reply into an error.
+        controller.enqueue(jsonLine({ type: 'text', value: result.reply }));
+        controller.enqueue(jsonLine({ type: 'reply-complete' }));
         controller.enqueue(
           jsonLine({
             type: 'done',
@@ -166,6 +133,7 @@ export async function POST(req: NextRequest) {
           })
         );
 
+        // Persist best-effort — a DB blip must not turn a good reply into an error.
         await persistMessage({
           id: nanoid(),
           resumeId: body.resumeId,
