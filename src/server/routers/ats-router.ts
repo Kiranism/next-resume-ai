@@ -70,6 +70,15 @@ async function persistKeywordCache(
   }
 }
 
+// The keyword list shipped to the client (drops the internal `present` flag).
+function clientKeywords(keywords: AnalyzedKeyword[]) {
+  return keywords.map((k) => ({
+    term: k.term,
+    importance: k.importance,
+    aliases: k.aliases ?? []
+  }));
+}
+
 export const atsRouter = j.router({
   getReport: privateProcedure
     .input(z.object({ resumeId: z.string() }))
@@ -107,7 +116,9 @@ export const atsRouter = j.router({
         await persistKeywordCache(resume.id, user.id, hash, keywords);
       }
 
-      return c.json(report);
+      // Keywords (with aliases) ship to the client so the chat can verify an
+      // applied edit locally with the exact matcher the server scores with.
+      return c.json({ ...report, keywords: clientKeywords(keywords) });
     }),
 
   // Analyze the CURRENT (client) resume content instead of the saved snapshot,
@@ -161,6 +172,6 @@ export const atsRouter = j.router({
         await persistKeywordCache(input.resumeId, user.id, hash, keywords);
       }
 
-      return c.json(report);
+      return c.json({ ...report, keywords: clientKeywords(keywords) });
     })
 });

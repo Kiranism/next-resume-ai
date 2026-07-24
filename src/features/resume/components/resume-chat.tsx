@@ -5,6 +5,7 @@ import { UseFormReturn } from 'react-hook-form';
 import {
   IconArrowBackUp,
   IconArrowUp,
+  IconChecklist,
   IconPencil,
   IconRefresh,
   IconSparkles,
@@ -42,9 +43,14 @@ import {
 import { type TResumeEditFormValues } from '@/features/resume/utils/form-schema';
 import {
   type AtsReport,
+  type AtsVerifyResult,
   type ChatFocus,
   type ChatUiMessage
 } from '@/features/resume/utils/chat-types';
+import {
+  matchedTermSet,
+  normalizeResumeInput
+} from '@/features/resume/utils/ats-match';
 import { streamChatEdit } from '../api/chat-stream';
 import { useClearResumeChat, useResumeChatMessages } from '../api';
 
@@ -216,6 +222,9 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
   const [focusMenuOpen, setFocusMenuOpen] = useState(false);
   const [focusOptions, setFocusOptions] = useState<ChatFocus[]>([]);
   const seededRef = useRef(false);
+  // Set by the ATS apply buttons: the report whose keywords the NEXT applied
+  // edit should be verified against (locally, with the server's exact matcher).
+  const pendingAtsReportRef = useRef<AtsReport | null>(null);
 
   const { data: chatData, isLoading: isLoadingHistory } =
     useResumeChatMessages(resumeId);
@@ -244,6 +253,35 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
     setMessages((prev) =>
       prev.map((m) => (m.id === id ? { ...m, ...patch } : m))
     );
+
+  // Instant local check after an ATS-triggered edit: which of the report's
+  // keywords does the updated resume literally match now? Runs the exact
+  // matcher the server scores with, so a ✓ here is what the next analysis
+  // will confirm.
+  const verifyAtsEdit = (
+    report: AtsReport,
+    updated: TResumeEditFormValues
+  ): AtsVerifyResult | undefined => {
+    if (!report.keywords?.length) return undefined;
+    const matchedNow = matchedTermSet(
+      report.keywords,
+      normalizeResumeInput({
+        personalDetails: updated.personal_details,
+        jobs: updated.jobs,
+        educations: updated.educations,
+        projects: updated.projects,
+        skills: updated.skills,
+        tools: updated.tools,
+        languages: updated.languages,
+        hiddenSections: updated.hiddenSections
+      })
+    );
+    return {
+      nowMatching: report.missingKeywords.filter((t) => matchedNow.has(t)),
+      stillMissing: report.missingKeywords.filter((t) => !matchedNow.has(t)),
+      lost: report.matchedKeywords.filter((t) => !matchedNow.has(t))
+    };
+  };
 
   const handleSend = async (text: string) => {
     const content = text.trim();
@@ -306,6 +344,15 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
         onReplyComplete: () =>
           updateMessage(assistantId, { applyingEdit: true }),
         onDone: ({ reply, changes, updatedResume }) => {
+          // If this send came from an ATS apply button, verify the edit
+          // against that report's keywords — instantly, with the same matcher
+          // the server scores with.
+          const pendingReport = pendingAtsReportRef.current;
+          pendingAtsReportRef.current = null;
+          const atsVerify =
+            updatedResume && pendingReport
+              ? verifyAtsEdit(pendingReport, updatedResume)
+              : undefined;
           if (updatedResume) {
             form.reset(updatedResume);
             saveNow(); // persist the AI edit immediately (agentic auto-save)
@@ -317,6 +364,7 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
                     ...m,
                     content: reply || m.content,
                     changes,
+                    atsVerify,
                     streaming: false,
                     applyingEdit: false,
                     undoSnapshot: updatedResume ? snapshot : undefined
@@ -325,13 +373,15 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
             )
           );
         },
-        onError: (message) =>
+        onError: (message) => {
+          pendingAtsReportRef.current = null;
           updateMessage(assistantId, {
             content: message,
             streaming: false,
             applyingEdit: false,
             error: true
-          })
+          });
+        }
       }
     );
 
@@ -383,6 +433,7 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
   };
 
   const handleApplyAts = (report: AtsReport) => {
+    pendingAtsReportRef.current = report;
     const parts: string[] = [];
     const required = report.missingRequired ?? [];
     const preferred = report.missingPreferred ?? [];
@@ -408,7 +459,8 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
 
   // One-click apply for a single ATS suggestion — a targeted edit through the
   // chat pipeline instead of the everything-at-once improve.
-  const handleApplySuggestion = (suggestion: string) => {
+  const handleApplySuggestion = (suggestion: string, report: AtsReport) => {
+    pendingAtsReportRef.current = report;
     handleSend(
       `Apply this ATS improvement as ONE targeted edit (keep everything else unchanged, never invent employers, roles, or dates): ${suggestion}`
     );
@@ -721,7 +773,8 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
                                               disabled={busy}
                                               onClick={() =>
                                                 handleApplySuggestion(
-                                                  suggestion
+                                                  suggestion,
+                                                  message.atsReport!
                                                 )
                                               }
                                             >
@@ -800,6 +853,67 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
                                   )}
                                 </div>
                               )}
+
+                            {/* Verify-after-apply: the local keyword check run
+                                against the edit this message applied. */}
+                            {message.atsVerify && !message.undone && (
+                              <div className='bg-muted/40 flex flex-col gap-2 rounded-lg border p-2.5 text-xs'>
+                                <div className='text-foreground flex items-center gap-1.5 font-medium'>
+                                  <IconChecklist className='size-3.5' />
+                                  Keyword check
+                                </div>
+                                {message.atsVerify.nowMatching.length > 0 && (
+                                  <div className='flex flex-wrap items-center gap-1'>
+                                    <span className='text-muted-foreground mr-1'>
+                                      ✓ Now matching
+                                    </span>
+                                    {message.atsVerify.nowMatching
+                                      .slice(0, 12)
+                                      .map((keyword, i) => (
+                                        <Badge key={i} variant='default'>
+                                          {keyword}
+                                        </Badge>
+                                      ))}
+                                  </div>
+                                )}
+                                {message.atsVerify.stillMissing.length > 0 && (
+                                  <div className='flex flex-wrap items-center gap-1'>
+                                    <span className='text-muted-foreground mr-1'>
+                                      ✗ Still missing
+                                    </span>
+                                    {message.atsVerify.stillMissing
+                                      .slice(0, 12)
+                                      .map((keyword, i) => (
+                                        <Badge key={i} variant='destructive'>
+                                          {keyword}
+                                        </Badge>
+                                      ))}
+                                  </div>
+                                )}
+                                {message.atsVerify.lost.length > 0 && (
+                                  <div className='flex flex-wrap items-center gap-1'>
+                                    <span className='text-muted-foreground mr-1'>
+                                      ⚠ No longer matching
+                                    </span>
+                                    {message.atsVerify.lost
+                                      .slice(0, 12)
+                                      .map((keyword, i) => (
+                                        <Badge key={i} variant='secondary'>
+                                          {keyword}
+                                        </Badge>
+                                      ))}
+                                  </div>
+                                )}
+                                <span className='text-muted-foreground'>
+                                  {message.atsVerify.stillMissing.length ===
+                                    0 && message.atsVerify.lost.length === 0
+                                    ? message.atsVerify.nowMatching.length > 0
+                                      ? 'Every targeted keyword now matches — run Analyze ATS to see your new score.'
+                                      : 'No keyword changes from this edit.'
+                                    : 'Verified with the same matcher the score uses — re-run Analyze ATS for the updated score.'}
+                                </span>
+                              </div>
+                            )}
                           </MessageContent>
                         </Message>
                       </MessageScrollerItem>
