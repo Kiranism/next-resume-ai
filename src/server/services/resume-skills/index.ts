@@ -22,11 +22,17 @@ import techResume from './tech-resume-optimizer.md';
 // agent-facing "When to Use" / "Core Capabilities" preamble, keeping the actual
 // techniques and criteria the model should apply. Saves tokens on every call.
 function distill(md: string): string {
-  return md
-    .replace(/^---\n[\s\S]*?\n---\n/, '') // YAML frontmatter
-    .replace(/\n##\s+When to Use[\s\S]*?(?=\n##\s)/i, '\n')
-    .replace(/\n##\s+Core Capabilities[\s\S]*?(?=\n##\s)/i, '\n')
-    .trim();
+  return (
+    md
+      .replace(/^---\n[\s\S]*?\n---\n/, '') // YAML frontmatter
+      .replace(/\n##\s+When to Use[\s\S]*?(?=\n##\s)/i, '\n')
+      .replace(/\n##\s+Core Capabilities[\s\S]*?(?=\n##\s)/i, '\n')
+      // Drop the skill's own "Output Format" report templates — they don't teach
+      // resume writing, and their example JSON/markdown can hijack a caller's own
+      // output contract (esp. the chat's JSON responses).
+      .replace(/\n##\s+[^\n]*Output Format[\s\S]*?(?=\n##\s)/gi, '\n')
+      .trim()
+  );
 }
 
 function frame(label: string, docs: string[]): string {

@@ -141,15 +141,6 @@ function mergeArrayById<T>(
   return { result, skipped };
 }
 
-// Section-level merge. The model returns only the sections it changed, and within
-// a list section only the ITEMS it changed/added — so we upsert by identity
-// (mergeArrayById) instead of blindly replacing the array. This prevents the
-// data-loss bug where editing one project/job wiped out the others just because
-// the model didn't echo them back.
-//  - personal_details: overlay provided string fields (can't blank existing).
-//  - jobs/educations/projects: validate incoming items strictly, then upsert by
-//    identity (matched replaced, new appended, omitted preserved).
-//  - skills/tools/languages: lenient parse, then the same identity upsert.
 // Accept an AI-returned structured item as long as it carries an identifying
 // value (so {} junk is dropped), passing it through as-is otherwise. This mirrors
 // the form — an incomplete entry is allowed and can be finished later — so a
@@ -166,6 +157,15 @@ function lenientEntry<T>(raw: unknown, identityFields: string[]): T | null {
   return hasIdentity ? (o as unknown as T) : null;
 }
 
+// Section-level merge. The model returns only the sections it changed, and within
+// a list section only the ITEMS it changed/added — so we upsert by identity
+// (mergeArrayById) instead of blindly replacing the array. This prevents the
+// data-loss bug where editing one project/job wiped out the others just because
+// the model didn't echo them back.
+//  - personal_details: overlay provided string fields (can't blank existing).
+//  - all list sections: upsert by identity — matched items are field-merged,
+//    new items appended, omitted items preserved. Items are accepted leniently
+//    (lenientEntry / the *Item schemas); only identity-less junk is dropped.
 function mergeResume(
   current: TResumeEditFormValues,
   ai: Record<string, unknown>
