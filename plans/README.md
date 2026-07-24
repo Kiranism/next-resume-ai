@@ -158,7 +158,7 @@ then the constrained Tiptap editor (031).
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 030  | Render a bold/bullets markdown subset in every PDF template | P1 | M | — | **DONE — merged to `main` (`1af779c`)**; executed in a worktree, reviewed & verified by advisor (tsc 0, lint 0, covers 8/8, bold+bullets confirmed in PNGs). |
-| 031  | Constrained Tiptap editor (bold + bullets) for summary & descriptions | P1 | M/L | 030 | TODO — unblocked (030 is on `main`) |
+| 031  | Constrained Tiptap editor (bold + bullets) for summary & descriptions | P1 | M/L | 030 | **APPROVED — merged to LOCAL `main` (`8acf893`), NOT pushed.** All static gates pass (tsc/lint/build 0, serialization round-trip 5/5); scope clean (13 files). Awaiting the maintainer's in-app verification (cursor/AI/preview round-trip) before push. |
 | 032  | Make `font-bold` actually render bold in templates One–Five | P2 | M | 030 | **DONE — merged to `main` (`572b9aa`)**; 37 `font-bold`→`Helvetica-Bold` across templates One–Five, reviewed & verified (all headings/titles now truly bold, 030's bullets+bold intact). |
 
 Dependency: 031 requires 030 — the editor emits `- `/`**` markup; without 030's
