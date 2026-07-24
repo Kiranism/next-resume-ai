@@ -96,30 +96,51 @@ function itemKey(section: string, item: Record<string, unknown>): string {
 }
 
 // Upsert the model's returned items into the current list WITHOUT dropping items
-// it didn't return. This is the fix for the data-loss bug: the model only has to
-// return the item(s) it changed, and matched items are replaced in place while
-// every unreturned item is preserved. Result length is always >= current, so a
-// chat edit can never silently delete an entry.
-function mergeArrayById<T>(current: T[], incoming: T[], section: string): T[] {
-  const keyOf = (item: T) =>
-    itemKey(section, item as unknown as Record<string, unknown>);
+// it didn't return (the data-loss fix). Two behaviours make edits robust:
+//  - Matched items are FIELD-merged: a partial edit (the model returns an item's
+//    identity + only its new description) keeps the fields it didn't mention,
+//    instead of being rejected for looking incomplete.
+//  - `coerce` validates/normalizes each resulting item; returning null skips
+//    just THAT item (never the whole section), preserving the current entry.
+// Result length is always >= current, so a chat edit can never silently delete.
+function mergeArrayById<T>(
+  current: T[],
+  incoming: unknown[],
+  section: string,
+  coerce: (item: unknown) => T | null
+): { result: T[]; skipped: boolean } {
+  const keyOf = (item: unknown) =>
+    itemKey(section, item as Record<string, unknown>);
   const result: T[] = [...current];
   const indexByKey = new Map<string, number>();
   result.forEach((item, i) => {
     const k = keyOf(item);
     if (k && !indexByKey.has(k)) indexByKey.set(k, i);
   });
-  for (const item of incoming) {
-    const k = keyOf(item);
+  let skipped = false;
+  for (const raw of incoming) {
+    const k = keyOf(raw);
     const at = k ? indexByKey.get(k) : undefined;
     if (at !== undefined) {
-      result[at] = item; // edit of an existing entry → replace in place
+      // Edit of an existing entry → field-merge the changed fields onto it.
+      const next = coerce({
+        ...(result[at] as Record<string, unknown>),
+        ...(raw as Record<string, unknown>)
+      });
+      if (next !== null) result[at] = next;
+      else skipped = true;
     } else {
-      result.push(item); // genuinely new entry → append
-      if (k) indexByKey.set(k, result.length - 1);
+      // Genuinely new entry → validate then append.
+      const next = coerce(raw);
+      if (next !== null) {
+        result.push(next);
+        if (k) indexByKey.set(k, result.length - 1);
+      } else {
+        skipped = true;
+      }
     }
   }
-  return result;
+  return { result, skipped };
 }
 
 // Section-level merge. The model returns only the sections it changed, and within
@@ -151,48 +172,67 @@ function mergeResume(
     merged.personal_details = next;
   }
 
+  // Lenient sections never reject an item; structured sections validate the
+  // field-merged result and skip only an individual item that can't be coerced.
+  const coerceJob = (i: unknown) => {
+    const p = jobSchema.safeParse(i);
+    return p.success ? p.data : null;
+  };
+  const coerceEducation = (i: unknown) => {
+    const p = educationSchema.safeParse(i);
+    return p.success ? p.data : null;
+  };
+  const coerceProject = (i: unknown) => {
+    const p = projectSchema.safeParse(i);
+    return p.success ? p.data : null;
+  };
+
   if (Array.isArray(ai.skills)) {
-    const incoming = z.array(skillItem).catch([]).parse(ai.skills);
-    merged.skills = mergeArrayById(current.skills ?? [], incoming, 'skills');
+    merged.skills = mergeArrayById(
+      current.skills ?? [],
+      ai.skills,
+      'skills',
+      (i) => skillItem.parse(i)
+    ).result;
   }
   if (Array.isArray(ai.tools)) {
-    const incoming = z.array(toolItem).catch([]).parse(ai.tools);
-    merged.tools = mergeArrayById(current.tools ?? [], incoming, 'tools');
+    merged.tools = mergeArrayById(current.tools ?? [], ai.tools, 'tools', (i) =>
+      toolItem.parse(i)
+    ).result;
   }
   if (Array.isArray(ai.languages)) {
-    const incoming = z.array(languageItem).catch([]).parse(ai.languages);
     merged.languages = mergeArrayById(
       current.languages ?? [],
-      incoming,
-      'languages'
-    );
+      ai.languages,
+      'languages',
+      (i) => languageItem.parse(i)
+    ).result;
   }
 
   if (Array.isArray(ai.jobs)) {
-    const parsed = z.array(jobSchema).safeParse(ai.jobs);
-    if (parsed.success)
-      merged.jobs = mergeArrayById(current.jobs ?? [], parsed.data, 'jobs');
-    else skipped.push('work experience');
+    const r = mergeArrayById(current.jobs ?? [], ai.jobs, 'jobs', coerceJob);
+    merged.jobs = r.result;
+    if (r.skipped) skipped.push('work experience');
   }
   if (Array.isArray(ai.educations)) {
-    const parsed = z.array(educationSchema).safeParse(ai.educations);
-    if (parsed.success)
-      merged.educations = mergeArrayById(
-        current.educations ?? [],
-        parsed.data,
-        'educations'
-      );
-    else skipped.push('education');
+    const r = mergeArrayById(
+      current.educations ?? [],
+      ai.educations,
+      'educations',
+      coerceEducation
+    );
+    merged.educations = r.result;
+    if (r.skipped) skipped.push('education');
   }
   if (Array.isArray(ai.projects)) {
-    const parsed = z.array(projectSchema).safeParse(ai.projects);
-    if (parsed.success)
-      merged.projects = mergeArrayById(
-        current.projects ?? [],
-        parsed.data,
-        'projects'
-      );
-    else skipped.push('projects');
+    const r = mergeArrayById(
+      current.projects ?? [],
+      ai.projects,
+      'projects',
+      coerceProject
+    );
+    merged.projects = r.result;
+    if (r.skipped) skipped.push('projects');
   }
 
   return { merged, skipped };
