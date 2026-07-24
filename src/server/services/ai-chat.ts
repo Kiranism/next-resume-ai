@@ -1,10 +1,5 @@
 import { z } from 'zod';
-import {
-  educationSchema,
-  jobSchema,
-  projectSchema,
-  TResumeEditFormValues
-} from '@/features/resume/utils/form-schema';
+import { TResumeEditFormValues } from '@/features/resume/utils/form-schema';
 import type {
   ChatEditResult,
   ChatFocus,
@@ -78,10 +73,12 @@ function itemKey(section: string, item: Record<string, unknown>): string {
       .trim()
       .toLowerCase();
   switch (section) {
+    // Text-only identity (no dates): the model reliably echoes employer/title
+    // but often reformats or omits dates, which would break the match.
     case 'jobs':
-      return `${s(item.employer)}|${s(item.jobTitle)}|${s(item.startDate)}`;
+      return `${s(item.employer)}|${s(item.jobTitle)}`;
     case 'educations':
-      return `${s(item.school)}|${s(item.degree)}|${s(item.startDate)}`;
+      return `${s(item.school)}|${s(item.degree)}`;
     case 'projects':
       return s(item.name);
     case 'skills':
@@ -152,6 +149,22 @@ function mergeArrayById<T>(
 //  - jobs/educations/projects: validate incoming items strictly, then upsert by
 //    identity (matched replaced, new appended, omitted preserved).
 //  - skills/tools/languages: lenient parse, then the same identity upsert.
+// Accept an AI-returned structured item as long as it carries an identifying
+// value (so {} junk is dropped), passing it through as-is otherwise. This mirrors
+// the form — an incomplete entry is allowed and can be finished later — so a
+// legitimate edit/addition is no longer rejected by strict validation (which
+// surfaced as "kept your existing entries to avoid data loss"). Sibling safety
+// still holds: mergeArrayById only replaces the matched item / appends new ones.
+function lenientEntry<T>(raw: unknown, identityFields: string[]): T | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const o = raw as Record<string, unknown>;
+  const hasIdentity = identityFields.some((f) => {
+    const v = o[f];
+    return typeof v === 'string' && v.trim() !== '';
+  });
+  return hasIdentity ? (o as unknown as T) : null;
+}
+
 function mergeResume(
   current: TResumeEditFormValues,
   ai: Record<string, unknown>
@@ -171,21 +184,6 @@ function mergeResume(
     }
     merged.personal_details = next;
   }
-
-  // Lenient sections never reject an item; structured sections validate the
-  // field-merged result and skip only an individual item that can't be coerced.
-  const coerceJob = (i: unknown) => {
-    const p = jobSchema.safeParse(i);
-    return p.success ? p.data : null;
-  };
-  const coerceEducation = (i: unknown) => {
-    const p = educationSchema.safeParse(i);
-    return p.success ? p.data : null;
-  };
-  const coerceProject = (i: unknown) => {
-    const p = projectSchema.safeParse(i);
-    return p.success ? p.data : null;
-  };
 
   if (Array.isArray(ai.skills)) {
     merged.skills = mergeArrayById(
@@ -210,7 +208,9 @@ function mergeResume(
   }
 
   if (Array.isArray(ai.jobs)) {
-    const r = mergeArrayById(current.jobs ?? [], ai.jobs, 'jobs', coerceJob);
+    const r = mergeArrayById(current.jobs ?? [], ai.jobs, 'jobs', (i) =>
+      lenientEntry(i, ['employer', 'jobTitle'])
+    );
     merged.jobs = r.result;
     if (r.skipped) skipped.push('work experience');
   }
@@ -219,7 +219,7 @@ function mergeResume(
       current.educations ?? [],
       ai.educations,
       'educations',
-      coerceEducation
+      (i) => lenientEntry(i, ['school', 'degree'])
     );
     merged.educations = r.result;
     if (r.skipped) skipped.push('education');
@@ -229,7 +229,7 @@ function mergeResume(
       current.projects ?? [],
       ai.projects,
       'projects',
-      coerceProject
+      (i) => lenientEntry(i, ['name'])
     );
     merged.projects = r.result;
     if (r.skipped) skipped.push('projects');
@@ -498,14 +498,14 @@ Field rules:
   return ONLY the items you ADDED or CHANGED — never resend the whole list. Items
   you leave out are preserved automatically. Keep each changed item's identifying
   field(s) EXACTLY unchanged so it matches the existing entry: projects by
-  "name"; jobs by "employer" + "jobTitle" + "startDate"; educations by "school" +
-  "degree" + "startDate"; skills by "skill_name"; tools by "tool_name"; languages
-  by "lang_name". Give a brand-new item a new identifying value.
+  "name"; jobs by "employer" + "jobTitle"; educations by "school" + "degree";
+  skills by "skill_name"; tools by "tool_name"; languages by "lang_name". Give a
+  brand-new item a new identifying value.
 - "remove": ONLY when the user EXPLICITLY asks to delete/remove item(s). It is an
   object keyed by section name, each value an array of the item(s) to delete,
   identified by the SAME identifying field(s) as above — e.g.
   {"projects":[{"name":"Old Project"}],"skills":[{"skill_name":"jQuery"}],
-  "jobs":[{"employer":"Acme","jobTitle":"Intern","startDate":"2019-06-01"}]}.
+  "jobs":[{"employer":"Acme","jobTitle":"Intern"}]}.
   Deletion happens ONLY through "remove" — leaving an item out of "updatedResume"
   never deletes it. Never remove anything the user did not clearly ask to remove.
   Use null when deleting nothing.
