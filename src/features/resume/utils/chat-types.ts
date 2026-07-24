@@ -61,4 +61,7 @@ export interface ChatUiMessage {
   // ATS score result rendered inline; atsLoading while it is being fetched.
   atsReport?: AtsReport;
   atsLoading?: boolean;
+  // Score from the previous ATS analysis in this thread → drives a Δ indicator
+  // so the user can see the score climbing as they apply improvements.
+  atsPrevScore?: number;
 }

@@ -330,6 +330,9 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
 
   const handleAtsScore = async () => {
     const messageId = createId();
+    // Remember the last score in this thread so we can show the improvement.
+    const prevScore = [...messages].reverse().find((m) => m.atsReport)
+      ?.atsReport?.score;
     setMessages((prev) => [
       ...prev,
       { id: messageId, role: 'assistant', content: '', atsLoading: true }
@@ -347,6 +350,7 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
         updateMessage(messageId, {
           atsLoading: false,
           atsReport: report,
+          atsPrevScore: prevScore,
           content: `Your resume scores ${report.score}/100 for ATS keyword match.`
         });
       } else {
@@ -369,7 +373,7 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
     const parts: string[] = [];
     if (report.missingKeywords.length > 0) {
       parts.push(
-        `Add these missing keywords to my skills/tools lists where they match my background, and weave the rest naturally into my summary and experience bullets so an ATS will detect them: ${report.missingKeywords.join(', ')}.`
+        `Add these keywords using the EXACT terms (verbatim, so an ATS matches them): put technologies/tools in my skills or tools lists where they fit my background, and weave the rest truthfully into my summary and experience bullets — never invent employers, roles, or dates. Keywords: ${report.missingKeywords.join(', ')}.`
       );
     }
     if (report.suggestions.length > 0) {
@@ -560,6 +564,29 @@ export function ResumeChat({ form, resumeId, saveNow }: ResumeChatProps) {
                                   <span className='text-muted-foreground'>
                                     / 100 ATS match
                                   </span>
+                                  {typeof message.atsPrevScore === 'number' &&
+                                    message.atsPrevScore !==
+                                      message.atsReport.score && (
+                                      <Badge
+                                        variant={
+                                          message.atsReport.score >
+                                          message.atsPrevScore
+                                            ? 'default'
+                                            : 'secondary'
+                                        }
+                                        className='ml-auto'
+                                      >
+                                        {message.atsReport.score >
+                                        message.atsPrevScore
+                                          ? '▲'
+                                          : '▼'}{' '}
+                                        {Math.abs(
+                                          message.atsReport.score -
+                                            message.atsPrevScore
+                                        )}{' '}
+                                        from last
+                                      </Badge>
+                                    )}
                                 </div>
 
                                 {message.atsReport.missingKeywords.length >
